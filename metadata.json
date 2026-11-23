@@ -1,0 +1,6 @@
+{
+  "name": "NightCoffee BD",
+  "description": "Find open late-night, family-friendly coffee shops across Dhaka, Bangladesh with menu prices in BDT, ratings, maps, and direct calling.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,64 @@
+package com.example.ui.theme
+
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+
+private val NightCoffeeDarkColorScheme = darkColorScheme(
+    primary = CremaGold,
+    onPrimary = DarkEspressoInk,
+    primaryContainer = CaramelContainer,
+    onPrimaryContainer = WarmCream,
+    secondary = ToastedLatte,
+    onSecondary = DarkEspressoInk,
+    secondaryContainer = RoastedBeanElevated,
+    onSecondaryContainer = WarmCream,
+    tertiary = FamilyHoney,
+    onTertiary = DarkEspressoInk,
+    tertiaryContainer = FamilyBadgeContainer,
+    onTertiaryContainer = FamilyHoney,
+    background = EspressoBlack,
+    onBackground = WarmCream,
+    surface = DeepRoastSurface,
+    onSurface = WarmCream,
+    surfaceVariant = MochaCardSurface,
+    onSurfaceVariant = ToastedLatte,
+    surfaceContainerLowest = EspressoBlack,
+    surfaceContainerLow = DeepRoastSurface,
+    surfaceContainer = MochaCardSurface,
+    surfaceContainerHigh = RoastedBeanElevated,
+    surfaceContainerHighest = ColorTokens.ElevatedChip,
+    outline = CocoaBorder,
+    outlineVariant = ColorTokens.SubtleDivider,
+    error = ClosedTerracotta,
+    onError = DarkEspressoInk,
+    errorContainer = ClosedTerracottaContainer,
+    onErrorContainer = ClosedTerracotta
+)
+
+private object ColorTokens {
+    val ElevatedChip = androidx.compose.ui.graphics.Color(0xFF38271F)
+    val SubtleDivider = androidx.compose.ui.graphics.Color(0xFF2E2019)
+}
+
+val NightCoffeeShapes = Shapes(
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(22.dp),
+    extraLarge = RoundedCornerShape(28.dp)
+)
+
+@Composable
+fun NightCoffeeTheme(
+    content: @Composable () -> Unit
+) {
+    MaterialTheme(
+        colorScheme = NightCoffeeDarkColorScheme,
+        typography = NightCoffeeTypography,
+        shapes = NightCoffeeShapes,
+        content = content
+    )
+}

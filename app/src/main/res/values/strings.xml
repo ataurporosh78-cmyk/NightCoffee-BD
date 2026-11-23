@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">NightCoffee BD</string>
+    <string name="home_subtitle">Late-night cafes across Dhaka</string>
+    <string name="filter_open_now">Open Now</string>
+    <string name="filter_area_label">Area</string>
+    <string name="area_all">All</string>
+    <string name="status_open_now">Open Now</string>
+    <string name="status_closed">Closed</string>
+    <string name="badge_family_friendly">Family Friendly</string>
+    <string name="shops_found_count">%1$d cafes</string>
+    <string name="shop_found_single">1 cafe</string>
+    <string name="empty_state_title">No coffee shops open for this filter</string>
+    <string name="empty_state_subtitle">Try switching off \"Open Now\" or picking All areas in Dhaka to browse late-night spots.</string>
+    <string name="reset_filters">Show All Cafes</string>
+    <string name="details_back_desc">Back to coffee shops</string>
+    <string name="details_hours_label">Opening Hours</string>
+    <string name="details_address_label">Full Address</string>
+    <string name="details_menu_title">Popular Coffee Menu</string>
+    <string name="details_menu_currency">All prices in BDT (৳)</string>
+    <string name="action_view_on_maps">View on Google Maps</string>
+    <string name="action_call_shop">Call Shop</string>
+    <string name="error_no_maps_app">No maps app found to open location</string>
+    <string name="error_no_dialer_app">No phone dialer app available</string>
+    <string name="dhaka_time_label">Dhaka Time: %1$s</string>
+    <string name="rating_out_of_five">%1$.1f / 5.0</string>
+    <string name="signature_highlight">House Favorite</string>
+</resources>
