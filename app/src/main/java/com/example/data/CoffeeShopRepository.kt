@@ -3,7 +3,7 @@ package com.example.data
 import com.example.R
 import com.example.model.CoffeeShop
 import com.example.model.DhakaArea
-
+import com.example.model.MenuItem
 
 interface CoffeeShopRepository {
     fun getCoffeeShops(): List<CoffeeShop>
@@ -26,37 +26,36 @@ class DhakaCoffeeShopRepository : CoffeeShopRepository {
             phoneNumber = "+8801711002411",
             latitude = 23.7937,
             longitude = 90.4066,
-            ambianceNote = "In-house small-batch roasting with warm wooden booths and calm late-evening seating.",
+            ambianceNote = "In-house small-batch roastery with late-night seating",
             imageRes = R.drawable.img_cafe_roastery,
             popularMenu = listOf(
-                MenuItem("Sylhet Reserve Pour-Over", "Single-origin hand-brewed filter coffee", 320, isHouseFavorite = true),
-                MenuItem("Caramel Macchiato", "Double espresso, steamed milk, house caramel", 360),
-                MenuItem("Iced Spanish Latte", "Espresso over chilled milk & condensed cream", 380, isHouseFavorite = true),
-                MenuItem("Classic Cappuccino", "Balanced espresso with velvety microfoam", 290),
-                MenuItem("Dark Chocolate Brownie", "Warm fudge square roasted in-house", 260)
+                MenuItem("Sylhet Reserve Pour-Over", "Single-origin washed pour-over with bright citrus notes", 380, true),
+                MenuItem("Caramel Macchiato", "Double espresso layered with steamed milk and caramel", 340, false),
+                MenuItem("Iced Spanish Latte", "Chilled sweetened condensed milk latte over ice", 360, true),
+                MenuItem("Classic Cappuccino", "Balanced 1:1:1 espresso, steamed milk, and microfoam", 310, false),
+                MenuItem("Dark Chocolate Brownie", "Warm fudgy brownie served alongside espresso", 240, false)
             )
         ),
         CoffeeShop(
             id = "tabaq-dhanmondi",
             name = "Tabaq Coffee",
             area = DhakaArea.DHANMONDI,
-            fullAddress = "House 45, Satmasjid Road (Road 9/A), Dhanmondi, Dhaka 1209",
+            fullAddress = "House 45, Satmasjid Road (Road 27), Dhanmondi, Dhaka 1209",
             hoursDisplay = "10:00 AM - 2:00 AM",
             openMinuteOfDay = 10 * 60,
             closeMinuteOfDay = 2 * 60,
             rating = 4.7,
             isFamilyFriendly = true,
-            phoneNumber = "+8801841223344",
-            latitude = 23.7465,
-            longitude = 90.3712,
-            ambianceNote = "Spacious two-floor lounge popular for late-night family hangouts and specialty espresso.",
-            imageRes = R.drawable.img_cafe_espresso,
+            phoneNumber = "+8801841233344",
+            latitude = 23.7461,
+            longitude = 90.3742,
+            ambianceNote = "Quiet late-night lounge popular with readers and night owls",
+            imageRes = R.drawable.img_cafe_lounge,
             popularMenu = listOf(
-                MenuItem("Hazelnut Mocha", "Rich Belgian cocoa, espresso & roasted hazelnut", 390, isHouseFavorite = true),
-                MenuItem("Tabaq Signature Cold Brew", "18-hour cold steep over crystal ice", 310),
-                MenuItem("Flat White", "Ristretto double shot with silky steamed milk", 300),
-                MenuItem("Iced Caramel Frappe", "Blended espresso cream with whipped topping", 410, isHouseFavorite = true),
-                MenuItem("Butter Croissant", "Flaky warm French-style pastry", 240)
+                MenuItem("Tabaq Signature Cold Brew", "Slow-steeped 18-hour cold brew with smooth cocoa finish", 350, true),
+                MenuItem("Hazelnut Flat White", "Velvety microfoam over ristretto shots with roasted hazelnut", 330, true),
+                MenuItem("Iced Caramel Frappe", "Blended iced coffee with caramel swirl and whipped cream", 370, false),
+                MenuItem("Butter Croissant", "Flaky warm French pastry for late-night snacking", 220, false)
             )
         ),
         CoffeeShop(
@@ -72,44 +71,20 @@ class DhakaCoffeeShopRepository : CoffeeShopRepository {
             phoneNumber = "+8801912556677",
             latitude = 23.7519,
             longitude = 90.4241,
-            ambianceNote = "Open-air lantern-lit terrace crafted for Khilgaon's vibrant post-dinner coffee crowd.",
+            ambianceNote = "Open-air lantern-lit terrace built for midnight hangouts",
             imageRes = R.drawable.img_cafe_terrace,
             popularMenu = listOf(
-                MenuItem("Turkish Cardamom Coffee", "Traditional ibrik brew with aromatic cardamom", 280, isHouseFavorite = true),
-                MenuItem("Nutella Espresso Shake", "Creamy hazelnut chocolate blended with espresso", 370),
-                MenuItem("Cinnamon Honey Latte", "Warm spiced milk & rich double shot", 330, isHouseFavorite = true),
-                MenuItem("Iced Americano", "Bold double espresso chilled with spring water", 230),
-                MenuItem("Lotus Biscoff Cheesecake", "Creamy cheesecake slice with spiced biscuit", 390)
-            )
-        ),
-        CoffeeShop(
-            id = "crimson-cup-uttara",
-            name = "Crimson Cup Coffee",
-            area = DhakaArea.UTTARA,
-            fullAddress = "Plot 12, Gareeb-E-Newaz Avenue, Sector 11, Uttara, Dhaka 1230",
-            hoursDisplay = "10:00 AM - 12:30 AM",
-            openMinuteOfDay = 10 * 60,
-            closeMinuteOfDay = 0 * 60 + 30,
-            rating = 4.7,
-            isFamilyFriendly = true,
-            phoneNumber = "+8801755889900",
-            latitude = 23.8759,
-            longitude = 90.3895,
-            ambianceNote = "Quiet, family-welcoming espresso house with plush leather seating and midnight desserts.",
-            imageRes = R.drawable.img_cafe_lounge,
-            popularMenu = listOf(
-                MenuItem("Crimson Mocha", "Signature white & dark chocolate espresso blend", 395, isHouseFavorite = true),
-                MenuItem("Roasted Almond Latte", "Steamed milk infused with toasted almond syrup", 350),
-                MenuItem("Iced Salted Caramel", "Sweet-savory caramel over espresso and milk", 375, isHouseFavorite = true),
-                MenuItem("Double Espresso", "Rich crema double-shot pull", 210),
-                MenuItem("Red Velvet Pastry", "Classic cocoa sponge with cream cheese frosting", 340)
+                MenuItem("Turkish Cardamom Coffee", "Traditional finely ground coffee infused with green cardamom", 280, true),
+                MenuItem("Nutella Espresso Shake", "Thick chilled espresso milkshake blended with hazelnut cocoa", 390, true),
+                MenuItem("Iced Americano", "Bold double espresso poured over chilled water and ice", 230, false),
+                MenuItem("Lotus Biscoff Cheesecake", "Creamy baked slice topped with spiced speculoos crumb", 340, false)
             )
         ),
         CoffeeShop(
             id = "beans-aroma-mirpur",
             name = "Beans & Aroma",
             area = DhakaArea.MIRPUR,
-            fullAddress = "House 18, Begum Rokeya Sarani, Section 10, Mirpur, Dhaka 1216",
+            fullAddress = "House 18, Begum Rokeya Sarani, Mirpur 10, Dhaka 1216",
             hoursDisplay = "11:00 AM - 11:00 PM",
             openMinuteOfDay = 11 * 60,
             closeMinuteOfDay = 23 * 60,
@@ -118,21 +93,21 @@ class DhakaCoffeeShopRepository : CoffeeShopRepository {
             phoneNumber = "+8801677334455",
             latitude = 23.8069,
             longitude = 90.3687,
-            ambianceNote = "Warm neighborhood cafe near Mirpur 10 circle ideal for families and evening study.",
+            ambianceNote = "Warm neighborhood cafe near Mirpur 10 for evening meetups",
             imageRes = R.drawable.img_cafe_espresso,
             popularMenu = listOf(
-                MenuItem("Classic Cafe Latte", "Smooth steamed milk over medium-roast espresso", 270, isHouseFavorite = true),
-                MenuItem("Iced Brown Sugar Shaken", "Espresso shaken with caramelized brown sugar", 320),
-                MenuItem("Vanilla Cold Coffee", "Chilled creamy vanilla coffee blend", 290, isHouseFavorite = true),
-                MenuItem("Hot Chocolate", "Velvety steamed cocoa topped with cream", 260),
-                MenuItem("Garlic Cheese Toast", "Toasted brioche with herb garlic butter", 220)
+                MenuItem("Classic Cafe Latte", "Smooth steamed milk over medium-roast espresso", 270, true),
+                MenuItem("Brown Sugar Shaken Espresso", "Espresso shaken with caramelized brown sugar", 320, true),
+                MenuItem("Vanilla Cold Coffee", "Creamy vanilla coffee blend served chilled", 290, false),
+                MenuItem("Hot Chocolate", "Velvety steamed cocoa topped with cream", 260, false),
+                MenuItem("Garlic Cheese Toast", "Toasted brioche with herb garlic butter", 220, false)
             )
         ),
         CoffeeShop(
             id = "gloria-jeans-dhanmondi",
             name = "Gloria Jean's Coffees",
             area = DhakaArea.DHANMONDI,
-            fullAddress = "House 28, Road 27 (Old), Dhanmondi, Dhaka 1209",
+            fullAddress = "House 742, Road 27 (Old), Dhanmondi, Dhaka 1209",
             hoursDisplay = "9:00 AM - 4:00 AM",
             openMinuteOfDay = 9 * 60,
             closeMinuteOfDay = 4 * 60,
@@ -141,14 +116,14 @@ class DhakaCoffeeShopRepository : CoffeeShopRepository {
             phoneNumber = "+8801713445566",
             latitude = 23.7523,
             longitude = 90.3775,
-            ambianceNote = "Dhaka's classic late-night espresso destination welcoming families till 4 AM.",
+            ambianceNote = "Dhaka's classic late-night espresso destination welcoming families till 4 AM",
             imageRes = R.drawable.img_cafe_roastery,
             popularMenu = listOf(
-                MenuItem("Voltage Chiller", "Espresso, dark chocolate & cream blended icy", 450, isHouseFavorite = true),
-                MenuItem("Creme Brulee Latte", "Caramelized vanilla custard espresso", 390),
-                MenuItem("Very Vanilla Chiller", "Smooth chilled coffee with Madagascar vanilla", 420, isHouseFavorite = true),
-                MenuItem("Cafe Mocha", "Rich espresso folded with chocolate & milk", 340),
-                MenuItem("Blueberry Muffin", "Soft baked muffin bursting with berries", 250)
+                MenuItem("Voltage Chiller", "Espresso, dark chocolate & cream blended icy", 450, true),
+                MenuItem("Creme Brulee Latte", "Caramelized vanilla custard espresso", 390, true),
+                MenuItem("Very Vanilla Chiller", "Smooth chilled coffee with Madagascar vanilla", 420, false),
+                MenuItem("Cafe Mocha", "Rich espresso folded with chocolate & milk", 340, false),
+                MenuItem("Blueberry Muffin", "Soft baked muffin bursting with berries", 250, false)
             )
         )
     )
