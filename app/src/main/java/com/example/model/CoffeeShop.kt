@@ -3,6 +3,7 @@ package com.example.model
 import android.os.Build
 import androidx.annotation.Keep
 import androidx.compose.runtime.Immutable
+import com.example.data.MenuItem
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.IgnoreExtraProperties
@@ -159,12 +160,18 @@ data class CoffeeShopJson(
         val cleanAddress = address.trim()
         val cleanPhone = phone.trim()
         val cleanItems = popularItems.map { it.trim() }.filter { it.isNotEmpty() }
-        val derivedMenu = cleanItems.map { item ->
+        val derivedMenu = cleanItems.mapIndexed { index, item ->
             val match = Regex("""^(.+?)\s*\(([^)]+)\)$""").matchEntire(item)
             if (match != null) {
-                MenuItem(name = match.groupValues[1].trim(), price = match.groupValues[2].trim())
+                val rawPrice = match.groupValues[2]
+                val priceBdt = Regex("""(\d+)""").find(rawPrice)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                MenuItem(
+                    name = match.groupValues[1].trim(),
+                    priceBdt = priceBdt,
+                    isHouseFavorite = index == 0
+                )
             } else {
-                MenuItem(name = item, price = priceRange.trim())
+                MenuItem(name = item, isHouseFavorite = index == 0)
             }
         }
         return CoffeeShop(
@@ -190,14 +197,6 @@ data class CoffeeShopJson(
         )
     }
 }
-
-@Immutable
-@Keep
-data class MenuItem(
-    val name: String = "",
-    val price: String = "",
-    val note: String = ""
-)
 
 @Immutable
 data class CoffeeShop(

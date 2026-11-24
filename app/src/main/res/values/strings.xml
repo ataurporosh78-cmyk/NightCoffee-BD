@@ -64,4 +64,7 @@
     <string name="action_call_shop">Call Shop</string>
     <string name="action_view_on_maps">View on Maps</string>
     <string name="default_web_client_id" translatable="false">placeholder_web_client_id</string>
+    <string name="details_menu_title">Popular Menu</string>
+    <string name="details_menu_currency">৳%d</string>
+    <string name="signature_highlight">Signature</string>
 </resources>
