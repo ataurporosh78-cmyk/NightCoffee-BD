@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 
 private val NightCoffeeDarkColorScheme = darkColorScheme(
-    primary = CremaGold,
+    primary = CaramelGold,
     onPrimary = DarkEspressoInk,
     primaryContainer = CaramelContainer,
     onPrimaryContainer = WarmCream,
@@ -30,25 +30,20 @@ private val NightCoffeeDarkColorScheme = darkColorScheme(
     surfaceContainerLow = DeepRoastSurface,
     surfaceContainer = MochaCardSurface,
     surfaceContainerHigh = RoastedBeanElevated,
-    surfaceContainerHighest = ColorTokens.ElevatedChip,
+    surfaceContainerHighest = RoastedBeanElevated,
     outline = CocoaBorder,
-    outlineVariant = ColorTokens.SubtleDivider,
-    error = ClosedTerracotta,
+    outlineVariant = CocoaBorder,
+    error = ClosedRed,
     onError = DarkEspressoInk,
-    errorContainer = ClosedTerracottaContainer,
-    onErrorContainer = ClosedTerracotta
+    errorContainer = ClosedRedContainer,
+    onErrorContainer = ClosedRed
 )
-
-private object ColorTokens {
-    val ElevatedChip = androidx.compose.ui.graphics.Color(0xFF38271F)
-    val SubtleDivider = androidx.compose.ui.graphics.Color(0xFF2E2019)
-}
 
 val NightCoffeeShapes = Shapes(
     small = RoundedCornerShape(10.dp),
     medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(22.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(26.dp)
 )
 
 @Composable

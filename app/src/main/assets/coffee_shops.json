@@ -1,0 +1,56 @@
+[
+  {
+    "id": "north-end-banani",
+    "name": "North End Coffee Roasters",
+    "area": "Banani",
+    "address": "House 41, Road 11, Block F, Banani, Dhaka 1213",
+    "openTime": "08:00 AM",
+    "closeTime": "01:00 AM",
+    "popularItems": [
+      "Sylhet Reserve Pour-Over",
+      "Caramel Macchiato",
+      "Iced Spanish Latte",
+      "Classic Cappuccino"
+    ],
+    "priceRange": "৳250 - ৳550",
+    "rating": 4.8,
+    "phone": "+8801711002411",
+    "isFamilyFriendly": true
+  },
+  {
+    "id": "tabaq-dhanmondi",
+    "name": "Tabaq Coffee",
+    "area": "Dhanmondi",
+    "address": "House 45, Satmasjid Road, Dhanmondi, Dhaka 1209",
+    "openTime": "10:00 AM",
+    "closeTime": "02:00 AM",
+    "popularItems": [
+      "Hazelnut Mocha",
+      "Signature Cold Brew",
+      "Flat White",
+      "Iced Caramel Frappe"
+    ],
+    "priceRange": "৳240 - ৳520",
+    "rating": 4.7,
+    "phone": "+8801841223344",
+    "isFamilyFriendly": true
+  },
+  {
+    "id": "kiva-han-khilgaon",
+    "name": "Kiva Han Coffee",
+    "area": "Khilgaon",
+    "address": "624/C, Taltola Market Lane, Block C, Khilgaon, Dhaka 1219",
+    "openTime": "16:00",
+    "closeTime": "03:00",
+    "popularItems": [
+      "Turkish Cardamom Coffee",
+      "Nutella Espresso Shake",
+      "Cinnamon Honey Latte",
+      "Lotus Biscoff Cheesecake"
+    ],
+    "priceRange": "৳220 - ৳490",
+    "rating": 4.6,
+    "phone": "+8801912556677",
+    "isFamilyFriendly": true
+  }
+]

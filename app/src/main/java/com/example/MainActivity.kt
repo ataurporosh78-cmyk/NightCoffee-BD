@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.example.ui.NightCoffeeApp
+import com.example.ui.NightCoffeeNavigation
 import com.example.ui.theme.NightCoffeeTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,7 +18,7 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             NightCoffeeTheme {
-                NightCoffeeApp()
+                NightCoffeeNavigation()
             }
         }
     }

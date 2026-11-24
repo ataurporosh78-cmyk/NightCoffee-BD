@@ -1,0 +1,150 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidArea(area) {
+      return area in [
+        'Dhanmondi',
+        'Gulshan',
+        'Banani',
+        'Uttara',
+        'Bashundhara',
+        'Baridhara',
+        'Mirpur',
+        'Mohammadpur',
+        'Khilgaon',
+        'Bailey Road',
+        'Old Dhaka',
+        'Keraniganj',
+        'Other'
+      ];
+    }
+
+    function isValidCommunityShop(data) {
+      return data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+             data.visibility == 'public' &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+             data.area is string && isValidArea(data.area) &&
+             data.address is string && data.address.size() >= 3 && data.address.size() <= 200 &&
+             data.openTime is string && data.openTime.size() >= 4 && data.openTime.size() <= 16 &&
+             data.closeTime is string && data.closeTime.size() >= 4 && data.closeTime.size() <= 16 &&
+             data.popularItems is list && data.popularItems.size() <= 20 &&
+             (data.popularItems.size() == 0 || data.popularItems[0] is string) &&
+             data.priceRange is string && data.priceRange.size() >= 1 && data.priceRange.size() <= 40 &&
+             data.phone is string && data.phone.size() <= 24 &&
+             data.familyFriendly is bool;
+    }
+
+    function isValidShopReview(data) {
+      return data.shopId is string && isValidId(data.shopId) &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 60 &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() >= 1 && data.comment.size() <= 500 &&
+             data.visibility == 'public';
+    }
+
+    match /community_shops/{shopId} {
+      allow get: if isSignedIn() && isValidId(shopId) && existing().visibility == 'public';
+      allow list: if isSignedIn() && existing().visibility == 'public';
+
+      allow create: if isSignedIn() &&
+                       isValidId(shopId) &&
+                       incoming().ownerId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'ownerId', 'visibility', 'name', 'area', 'address',
+                         'openTime', 'closeTime', 'popularItems', 'priceRange',
+                         'phone', 'familyFriendly', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'ownerId', 'visibility', 'name', 'area', 'address',
+                         'openTime', 'closeTime', 'popularItems', 'priceRange',
+                         'phone', 'familyFriendly', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidCommunityShop(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isSignedIn() &&
+                       isValidId(shopId) &&
+                       existing().ownerId == request.auth.uid &&
+                       isValidCommunityShop(incoming()) &&
+                       incoming().ownerId == existing().ownerId &&
+                       incoming().visibility == existing().visibility &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'name', 'area', 'address', 'openTime', 'closeTime',
+                         'popularItems', 'priceRange', 'phone', 'familyFriendly', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() &&
+                       isValidId(shopId) &&
+                       existing().ownerId == request.auth.uid;
+    }
+
+    match /shop_reviews/{reviewId} {
+      allow get: if isSignedIn() && isValidId(reviewId) && existing().visibility == 'public';
+      allow list: if isSignedIn() && existing().visibility == 'public';
+
+      allow create: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'shopId', 'userId', 'authorName', 'rating',
+                         'comment', 'visibility', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'shopId', 'userId', 'authorName', 'rating',
+                         'comment', 'visibility', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidShopReview(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       existing().userId == request.auth.uid &&
+                       isValidShopReview(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().shopId == existing().shopId &&
+                       incoming().visibility == existing().visibility &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'authorName', 'rating', 'comment', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       existing().userId == request.auth.uid;
+    }
+  }
+}

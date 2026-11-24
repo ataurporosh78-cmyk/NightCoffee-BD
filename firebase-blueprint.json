@@ -1,0 +1,143 @@
+{
+  "entities": {
+    "CommunityShop": {
+      "title": "CommunityShop",
+      "description": "User-submitted coffee shop in Dhaka stored in Cloud Firestore",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user who submitted this shop"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"],
+          "description": "Public directory visibility flag"
+        },
+        "name": {
+          "type": "string",
+          "description": "Coffee shop display name"
+        },
+        "area": {
+          "type": "string",
+          "description": "Dhaka neighborhood area name"
+        },
+        "address": {
+          "type": "string",
+          "description": "Full street address"
+        },
+        "openTime": {
+          "type": "string",
+          "description": "Opening time in 12h or 24h format"
+        },
+        "closeTime": {
+          "type": "string",
+          "description": "Closing time in 12h or 24h format"
+        },
+        "popularItems": {
+          "type": "array",
+          "description": "List of popular coffee/menu item strings"
+        },
+        "priceRange": {
+          "type": "string",
+          "description": "Price range label in BDT"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Shop contact phone number"
+        },
+        "familyFriendly": {
+          "type": "boolean",
+          "description": "Whether the coffee shop is family friendly"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "ownerId",
+        "visibility",
+        "name",
+        "area",
+        "address",
+        "openTime",
+        "closeTime",
+        "popularItems",
+        "priceRange",
+        "phone",
+        "familyFriendly",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ShopReview": {
+      "title": "ShopReview",
+      "description": "User review and 1-5 star rating for any coffee shop",
+      "type": "object",
+      "properties": {
+        "shopId": {
+          "type": "string",
+          "description": "Target coffee shop identifier"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the review author"
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Display name of the review author"
+        },
+        "rating": {
+          "type": "integer",
+          "description": "1 to 5 star rating"
+        },
+        "comment": {
+          "type": "string",
+          "description": "Review text comment"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"],
+          "description": "Public review visibility flag"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "shopId",
+        "userId",
+        "authorName",
+        "rating",
+        "comment",
+        "visibility",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/community_shops/{shopId}": {
+      "schema": { "$ref": "#/entities/CommunityShop" },
+      "description": "Shared community-contributed coffee shops in Dhaka"
+    },
+    "/shop_reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/ShopReview" },
+      "description": "Shared community coffee shop reviews and 1-5 star ratings"
+    }
+  }
+}
