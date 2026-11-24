@@ -73,6 +73,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.R
+import com.example.model.MenuItem
 import com.example.model.ShopReview
 import com.example.ui.components.AreaBadge
 import com.example.ui.components.CommunityBadge
@@ -361,6 +362,19 @@ fun ShopDetailsScreen(
             } else {
                 val item = detailState.item
                 val shop = item.shop
+                val menuLabels: List<String> = remember(shop.popularItems, shop.popularMenu) {
+                    if (shop.popularItems.isNotEmpty()) {
+                        shop.popularItems
+                    } else {
+                        shop.popularMenu.map { menuItem: MenuItem ->
+                            if (menuItem.priceBdt > 0) {
+                                "${menuItem.name} (৳${menuItem.priceBdt})"
+                            } else {
+                                menuItem.name
+                            }
+                        }
+                    }
+                }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -450,7 +464,7 @@ fun ShopDetailsScreen(
                         }
                     }
 
-                    if (shop.popularItems.isNotEmpty()) {
+                    if (menuLabels.isNotEmpty()) {
                         item(key = "popular_items_card") {
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
@@ -472,7 +486,7 @@ fun ShopDetailsScreen(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        shop.popularItems.forEach { drink ->
+                                        menuLabels.forEach { drink ->
                                             Surface(
                                                 shape = RoundedCornerShape(12.dp),
                                                 color = RoastedBeanElevated,

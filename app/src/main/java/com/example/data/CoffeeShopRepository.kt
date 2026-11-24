@@ -3,6 +3,7 @@ package com.example.data
 import com.example.R
 import com.example.model.CoffeeShop
 import com.example.model.DhakaArea
+import com.example.model.MenuItem
 
 interface CoffeeShopRepository {
     fun getCoffeeShops(): List<CoffeeShop>

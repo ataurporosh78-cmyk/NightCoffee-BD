@@ -3,7 +3,6 @@ package com.example.model
 import android.os.Build
 import androidx.annotation.Keep
 import androidx.compose.runtime.Immutable
-import com.example.data.MenuItem
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.IgnoreExtraProperties
@@ -197,6 +196,15 @@ data class CoffeeShopJson(
         )
     }
 }
+
+@Immutable
+@Keep
+data class MenuItem(
+    val name: String = "",
+    val description: String = "",
+    val priceBdt: Int = 0,
+    val isHouseFavorite: Boolean = false
+)
 
 @Immutable
 data class CoffeeShop(
