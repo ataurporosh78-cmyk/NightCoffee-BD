@@ -20,6 +20,8 @@ val MutedCinnamon = Color(0xFF9F8C7B)
 // Status & Badge Semantic Tokens
 val OpenGreen = Color(0xFF52C98A)
 val OpenGreenContainer = Color(0xFF163324)
+val OpenMint = Color(0xFF4CAF50)
+val OpenMintContainer = Color(0xFF1B3B22)
 val ClosedRed = Color(0xFFE56B6F)
 val ClosedRedContainer = Color(0xFF3A1B1D)
 val FamilyHoney = Color(0xFFEBC88A)

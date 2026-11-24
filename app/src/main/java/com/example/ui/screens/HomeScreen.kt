@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalStdlibApi::class)
+
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke

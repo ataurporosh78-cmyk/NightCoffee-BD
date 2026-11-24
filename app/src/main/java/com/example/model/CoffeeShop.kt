@@ -195,7 +195,8 @@ data class CoffeeShopJson(
 @Keep
 data class MenuItem(
     val name: String = "",
-    val price: String = ""
+    val price: String = "",
+    val note: String = ""
 )
 
 @Immutable
@@ -217,6 +218,7 @@ data class CoffeeShop(
     val phone: String = "",
     val phoneNumber: String = phone,
     val isFamilyFriendly: Boolean = true,
+    val isHouseFavorite: Boolean = false,
     val latitude: Double = 23.7925,
     val longitude: Double = 90.4078,
     val ambianceNote: String = "Cozy night coffee spot",
