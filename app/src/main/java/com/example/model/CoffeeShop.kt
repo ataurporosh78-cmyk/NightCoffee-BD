@@ -140,25 +140,32 @@ object ShopTimeParser {
 
 @JsonClass(generateAdapter = true)
 data class CoffeeShopJson(
-    val id: String = "",
-    val name: String = "",
-    val area: String = "Other",
-    val address: String = "",
-    val openTime: String = "10:00 AM",
-    val closeTime: String = "11:00 PM",
-    val popularItems: List<String> = emptyList(),
-    val priceRange: String = "",
-    val rating: Double = 4.5,
-    val phone: String = "",
-    val isFamilyFriendly: Boolean = true
+    val id: String? = null,
+    val name: String? = null,
+    val area: String? = null,
+    val address: String? = null,
+    val openTime: String? = null,
+    val closeTime: String? = null,
+    val popularItems: List<String?>? = null,
+    val priceRange: String? = null,
+    val rating: Double? = null,
+    val phone: String? = null,
+    val isFamilyFriendly: Boolean? = null
 ) {
     fun toDomain(): CoffeeShop {
-        val resolvedArea = DhakaArea.fromRaw(area)
-        val openMin = ShopTimeParser.parseMinuteOfDay(openTime)
-        val closeMin = ShopTimeParser.parseMinuteOfDay(closeTime)
-        val cleanAddress = address.trim()
-        val cleanPhone = phone.trim()
-        val cleanItems = popularItems.map { it.trim() }.filter { it.isNotEmpty() }
+        val safeName = name?.trim().orEmpty().ifBlank { "Dhaka Coffee Spot" }
+        val safeAreaRaw = area?.trim().orEmpty().ifBlank { "Other" }
+        val resolvedArea = DhakaArea.fromRaw(safeAreaRaw)
+        val safeOpenTime = openTime?.trim().orEmpty().ifBlank { "10:00 AM" }
+        val safeCloseTime = closeTime?.trim().orEmpty().ifBlank { "11:00 PM" }
+        val openMin = ShopTimeParser.parseMinuteOfDay(safeOpenTime)
+        val closeMin = ShopTimeParser.parseMinuteOfDay(safeCloseTime)
+        val cleanAddress = address?.trim().orEmpty()
+        val cleanPhone = phone?.trim().orEmpty()
+        val cleanPriceRange = priceRange?.trim().orEmpty()
+        val cleanItems = popularItems.orEmpty()
+            .mapNotNull { it?.trim() }
+            .filter { it.isNotEmpty() }
         val derivedMenu = cleanItems.mapIndexed { index, item ->
             val match = Regex("""^(.+?)\s*\(([^)]+)\)$""").matchEntire(item)
             if (match != null) {
@@ -173,24 +180,29 @@ data class CoffeeShopJson(
                 MenuItem(name = item, isHouseFavorite = index == 0)
             }
         }
+        val rawId = id?.trim().orEmpty()
+        val fallbackId = safeName.lowercase(Locale.US)
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .trim('-')
+            .ifBlank { "shop-${safeName.hashCode()}" }
         return CoffeeShop(
-            id = id.ifBlank { name.lowercase(Locale.US).replace(Regex("[^a-z0-9]+"), "-") },
-            name = name.trim(),
+            id = rawId.ifBlank { fallbackId },
+            name = safeName,
             area = resolvedArea,
-            areaLabel = area.trim().ifBlank { resolvedArea.displayName },
+            areaLabel = safeAreaRaw.ifBlank { resolvedArea.displayName },
             address = cleanAddress,
             fullAddress = cleanAddress,
-            openTime = openTime.trim(),
-            closeTime = closeTime.trim(),
-            hoursDisplay = ShopTimeParser.formatHoursRange(openTime, closeTime),
+            openTime = safeOpenTime,
+            closeTime = safeCloseTime,
+            hoursDisplay = ShopTimeParser.formatHoursRange(safeOpenTime, safeCloseTime),
             openMinuteOfDay = openMin,
             closeMinuteOfDay = closeMin,
             popularItems = cleanItems,
-            priceRange = priceRange.trim(),
-            rating = rating.coerceIn(0.0, 5.0),
+            priceRange = cleanPriceRange,
+            rating = (rating ?: 4.5).coerceIn(0.0, 5.0),
             phone = cleanPhone,
             phoneNumber = cleanPhone,
-            isFamilyFriendly = isFamilyFriendly,
+            isFamilyFriendly = isFamilyFriendly ?: true,
             popularMenu = derivedMenu,
             isCommunitySubmitted = false
         )

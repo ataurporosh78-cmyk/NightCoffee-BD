@@ -29,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
@@ -118,7 +119,9 @@ fun HomeScreen(
     onAddShop: suspend (NewCoffeeShopInput) -> Result<Unit>,
     onClearError: () -> Unit,
     onSignOutClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSignedIn: Boolean = true,
+    onRequireSignIn: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -150,7 +153,13 @@ fun HomeScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { showAddShopSheet = true },
+                onClick = {
+                    if (isSignedIn) {
+                        showAddShopSheet = true
+                    } else {
+                        onRequireSignIn()
+                    }
+                },
                 icon = {
                     Icon(
                         imageVector = Icons.Rounded.Add,
@@ -185,6 +194,7 @@ fun HomeScreen(
             ) {
                 HomeHeaderSection(
                     localTimeDisplay = uiState.localTimeDisplay,
+                    isSignedIn = isSignedIn,
                     onSignOutClick = onSignOutClick
                 )
 
@@ -287,6 +297,7 @@ fun HomeScreen(
 @Composable
 private fun HomeHeaderSection(
     localTimeDisplay: String,
+    isSignedIn: Boolean,
     onSignOutClick: () -> Unit
 ) {
     Row(
@@ -371,12 +382,18 @@ private fun HomeHeaderSection(
                 onClick = onSignOutClick,
                 modifier = Modifier
                     .size(48.dp)
-                    .testTag("sign_out_button")
+                    .testTag(if (isSignedIn) "sign_out_button" else "sign_in_button")
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.Logout,
-                    contentDescription = stringResource(R.string.auth_sign_out_desc),
-                    tint = ToastedLatte
+                    imageVector = if (isSignedIn) {
+                        Icons.AutoMirrored.Rounded.Logout
+                    } else {
+                        Icons.AutoMirrored.Rounded.Login
+                    },
+                    contentDescription = stringResource(
+                        if (isSignedIn) R.string.auth_sign_out_desc else R.string.auth_sign_in_desc
+                    ),
+                    tint = if (isSignedIn) ToastedLatte else CaramelGold
                 )
             }
         }

@@ -1,11 +1,13 @@
 package com.example
 
 import com.example.data.CoffeeRepository
+import com.example.data.DhakaCoffeeShopRepository
 import com.example.data.InMemoryCoffeeAssetLoader
 import com.example.data.InMemoryCommunityDataSource
 import com.example.data.InMemoryFavoritesStorage
 import com.example.data.IndexedCoffeeCatalog
 import com.example.data.NewCoffeeShopInput
+import com.example.data.UnavailableCommunityDataSource
 import com.example.model.CoffeeShop
 import com.example.model.CoffeeShopJson
 import com.example.model.DhakaArea
@@ -230,5 +232,43 @@ class ExampleUnitTest {
         assertEquals("Great midnight espresso!", detail.reviews.first().comment)
 
         collectJob.cancel()
+    }
+
+    @Test
+    fun `CoffeeShopJson handles null and malformed fields without crashing`() {
+        val malformed = CoffeeShopJson(
+            id = null,
+            name = "   ",
+            area = null,
+            address = null,
+            openTime = "",
+            closeTime = null,
+            popularItems = listOf(null, "  ", "Iced Americano (৳240)"),
+            priceRange = null,
+            rating = 9.5,
+            phone = null,
+            isFamilyFriendly = null
+        )
+
+        val shop = malformed.toDomain()
+        assertEquals("Dhaka Coffee Spot", shop.name)
+        assertEquals("dhaka-coffee-spot", shop.id)
+        assertEquals(DhakaArea.OTHER, shop.area)
+        assertEquals(listOf("Iced Americano (৳240)"), shop.popularItems)
+        assertEquals(5.0, shop.rating, 0.001)
+        assertTrue(shop.isFamilyFriendly)
+        assertEquals("10:00 AM - 11:00 PM", shop.hoursDisplay)
+    }
+
+    @Test
+    fun `UnavailableCommunityDataSource and fallback DhakaCoffeeShopRepository work safely without Firebase`() = runTest {
+        val source = UnavailableCommunityDataSource()
+        assertTrue(source.observeCommunityShops().first().isEmpty())
+        assertTrue(source.observePublicReviews().first().isEmpty())
+        assertTrue(source.submitReview("shop-1", 5, "Great").isFailure)
+
+        val fallbackShops = DhakaCoffeeShopRepository().getCoffeeShops()
+        assertTrue(fallbackShops.isNotEmpty())
+        assertTrue(fallbackShops.all { it.id.isNotBlank() && it.name.isNotBlank() })
     }
 }

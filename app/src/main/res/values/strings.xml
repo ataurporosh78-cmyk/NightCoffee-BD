@@ -67,4 +67,8 @@
     <string name="details_menu_title">Popular Menu</string>
     <string name="details_menu_currency">৳%d</string>
     <string name="signature_highlight">Signature</string>
+    <string name="auth_continue_guest">Continue as Guest</string>
+    <string name="auth_sign_in_desc">Sign in</string>
+    <string name="auth_sign_in_to_review">Sign in to Post Review</string>
+    <string name="auth_unavailable_msg">Cloud sign-in is unavailable in this build. You can still browse all local Dhaka cafes as a guest.</string>
 </resources>

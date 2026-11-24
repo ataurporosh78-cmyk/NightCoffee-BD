@@ -109,7 +109,9 @@ fun ShopDetailsScreen(
     onSubmitReview: suspend (rating: Int, comment: String) -> Result<Unit>,
     onDeleteReview: suspend (reviewId: String) -> Result<Unit>,
     onClearError: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSignedIn: Boolean = true,
+    onRequireSignIn: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -585,19 +587,27 @@ fun ShopDetailsScreen(
 
                                 Button(
                                     onClick = {
-                                        val cleanComment = reviewComment.trim()
-                                        if (cleanComment.isNotEmpty() && !isSubmittingAction) {
-                                            coroutineScope.launch {
-                                                val result = onSubmitReview(selectedRating, cleanComment)
-                                                if (result.isSuccess) {
-                                                    reviewComment = ""
-                                                    selectedRating = 5
-                                                    snackbarHostState.showSnackbar(reviewPostedMsg)
+                                        if (!isSignedIn) {
+                                            onRequireSignIn()
+                                        } else {
+                                            val cleanComment = reviewComment.trim()
+                                            if (cleanComment.isNotEmpty() && !isSubmittingAction) {
+                                                coroutineScope.launch {
+                                                    val result = onSubmitReview(selectedRating, cleanComment)
+                                                    if (result.isSuccess) {
+                                                        reviewComment = ""
+                                                        selectedRating = 5
+                                                        snackbarHostState.showSnackbar(reviewPostedMsg)
+                                                    }
                                                 }
                                             }
                                         }
                                     },
-                                    enabled = reviewComment.isNotBlank() && !isSubmittingAction,
+                                    enabled = if (!isSignedIn) {
+                                        !isSubmittingAction
+                                    } else {
+                                        reviewComment.isNotBlank() && !isSubmittingAction
+                                    },
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = CaramelGold,
@@ -618,7 +628,13 @@ fun ShopDetailsScreen(
                                         )
                                     } else {
                                         Text(
-                                            text = stringResource(R.string.reviews_submit_button),
+                                            text = stringResource(
+                                                if (isSignedIn) {
+                                                    R.string.reviews_submit_button
+                                                } else {
+                                                    R.string.auth_sign_in_to_review
+                                                }
+                                            ),
                                             fontWeight = FontWeight.Bold
                                         )
                                     }

@@ -1,21 +1,21 @@
 package com.example.data
 
 import android.content.Context
-import com.example.R
+import android.util.Log
 import com.example.model.CoffeeShop
 import com.example.model.CoffeeShopJson
 import com.example.model.CommunityShopDoc
 import com.example.model.DhakaArea
 import com.example.model.ShopReview
 import com.example.model.ShopTimeParser
-import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.auth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.snapshots
+import org.json.JSONArray
+import org.json.JSONObject
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import java.io.BufferedReader
@@ -42,18 +42,111 @@ class AssetCoffeeLoader(
 ) : CoffeeAssetLoader {
 
     override suspend fun loadCatalog(): List<CoffeeShop> = withContext(Dispatchers.IO) {
-        val listType = Types.newParameterizedType(List::class.java, CoffeeShopJson::class.java)
-        val adapter = moshi.adapter<List<CoffeeShopJson>>(listType)
-        val rawJson = context.assets.open(ASSET_FILE_NAME).use { inputStream ->
-            BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
-                reader.readText()
+        val rawJson = try {
+            context.assets.open(ASSET_FILE_NAME).use { inputStream ->
+                BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
+                    reader.readText()
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Unable to read $ASSET_FILE_NAME, using bundled fallback catalog", e)
+            return@withContext fallbackCatalog()
+        }
+
+        if (rawJson.isBlank()) {
+            return@withContext fallbackCatalog()
+        }
+
+        val parsed = try {
+            val listType = Types.newParameterizedType(List::class.java, CoffeeShopJson::class.java)
+            val adapter = moshi.adapter<List<CoffeeShopJson>>(listType).lenient()
+            adapter.fromJson(rawJson).orEmpty().map { it.toDomain() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Primary Moshi parse failed, attempting resilient per-item JSON parse", e)
+            parseLenientJsonArray(rawJson)
+        }
+
+        parsed.ifEmpty { fallbackCatalog() }
+    }
+
+    private fun parseLenientJsonArray(rawJson: String): List<CoffeeShop> {
+        return try {
+            val array = JSONArray(rawJson)
+            buildList(array.length()) {
+                for (i in 0 until array.length()) {
+                    val obj = array.optJSONObject(i) ?: continue
+                    runCatching { jsonObjectToDomain(obj) }
+                        .onSuccess { add(it) }
+                        .onFailure { err ->
+                            Log.w(TAG, "Skipping malformed shop entry at index $i: ${err.message}")
+                        }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Lenient JSONArray parse failed, using bundled fallback catalog", e)
+            emptyList()
+        }
+    }
+
+    private fun jsonObjectToDomain(obj: JSONObject): CoffeeShop {
+        val itemsArray = obj.optJSONArray("popularItems")
+        val items = buildList {
+            if (itemsArray != null) {
+                for (i in 0 until itemsArray.length()) {
+                    val value = itemsArray.optString(i, "").trim()
+                    if (value.isNotEmpty() && !value.equals("null", ignoreCase = true)) {
+                        add(value)
+                    }
+                }
             }
         }
-        val parsed = adapter.fromJson(rawJson).orEmpty()
-        parsed.map { it.toDomain() }
+        return CoffeeShopJson(
+            id = obj.optString("id", "").takeIf { !it.equals("null", ignoreCase = true) },
+            name = obj.optString("name", "").takeIf { !it.equals("null", ignoreCase = true) },
+            area = obj.optString("area", "").takeIf { !it.equals("null", ignoreCase = true) },
+            address = obj.optString("address", "").takeIf { !it.equals("null", ignoreCase = true) },
+            openTime = obj.optString("openTime", "").takeIf { !it.equals("null", ignoreCase = true) },
+            closeTime = obj.optString("closeTime", "").takeIf { !it.equals("null", ignoreCase = true) },
+            popularItems = items,
+            priceRange = obj.optString("priceRange", "").takeIf { !it.equals("null", ignoreCase = true) },
+            rating = obj.optDouble("rating", 4.5).let { if (it.isNaN()) 4.5 else it },
+            phone = obj.optString("phone", "").takeIf { !it.equals("null", ignoreCase = true) },
+            isFamilyFriendly = obj.optBoolean("isFamilyFriendly", true)
+        ).toDomain()
+    }
+
+    private fun fallbackCatalog(): List<CoffeeShop> {
+        return runCatching {
+            DhakaCoffeeShopRepository().getCoffeeShops().map { shop ->
+                val resolvedHours = shop.hoursDisplay.ifBlank {
+                    ShopTimeParser.formatHoursRange(shop.openTime, shop.closeTime)
+                }
+                val resolvedAddress = shop.address.ifBlank { shop.fullAddress }
+                val resolvedPhone = shop.phone.ifBlank { shop.phoneNumber }
+                val resolvedItems = shop.popularItems.ifEmpty {
+                    shop.popularMenu.map { item ->
+                        if (item.priceBdt > 0) "${item.name} (৳${item.priceBdt})" else item.name
+                    }
+                }
+                shop.copy(
+                    areaLabel = shop.areaLabel.ifBlank { shop.area.displayName },
+                    address = resolvedAddress,
+                    fullAddress = shop.fullAddress.ifBlank { resolvedAddress },
+                    hoursDisplay = resolvedHours,
+                    phone = resolvedPhone,
+                    phoneNumber = shop.phoneNumber.ifBlank { resolvedPhone },
+                    popularItems = resolvedItems
+                )
+            }
+        }.getOrDefault(emptyList())
     }
 
     companion object {
+        private const val TAG = "AssetCoffeeLoader"
         private const val ASSET_FILE_NAME = "coffee_shops.json"
     }
 }
@@ -86,22 +179,16 @@ data class NewCoffeeShopInput(
 
 class FirestoreCommunityDataSource(
     private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth = Firebase.auth
+    private val auth: FirebaseAuth?
 ) : CommunityDataSource {
 
-    constructor(context: Context) : this(
-        db = FirebaseFirestore.getInstance(
-            context.applicationContext.getString(R.string.firestore_database_id)
-        )
-    )
-
     private fun requireUserId(): String {
-        return auth.currentUser?.uid
+        return auth?.currentUser?.uid
             ?: throw IllegalStateException("User must be signed in with Google before accessing Firestore.")
     }
 
     override fun observeCommunityShops(): Flow<List<CoffeeShop>> = flow {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         if (uid.isNullOrBlank()) {
             emit(emptyList())
             return@flow
@@ -122,7 +209,7 @@ class FirestoreCommunityDataSource(
                     .firstOrNull()
                 if (firestoreError == null && error is CancellationException) throw error
                 val exceptionToLog = firestoreError ?: (error as? Exception)
-                if (exceptionToLog != null && auth.currentUser?.uid == uid) {
+                if (exceptionToLog != null && auth?.currentUser?.uid == uid) {
                     handleFirestoreError(exceptionToLog, OperationType.LIST, path)
                 }
                 throw error
@@ -131,7 +218,7 @@ class FirestoreCommunityDataSource(
     }
 
     override fun observePublicReviews(): Flow<List<ShopReview>> = flow {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         if (uid.isNullOrBlank()) {
             emit(emptyList())
             return@flow
@@ -152,7 +239,7 @@ class FirestoreCommunityDataSource(
                     .firstOrNull()
                 if (firestoreError == null && error is CancellationException) throw error
                 val exceptionToLog = firestoreError ?: (error as? Exception)
-                if (exceptionToLog != null && auth.currentUser?.uid == uid) {
+                if (exceptionToLog != null && auth?.currentUser?.uid == uid) {
                     handleFirestoreError(exceptionToLog, OperationType.LIST, path)
                 }
                 throw error
@@ -213,7 +300,7 @@ class FirestoreCommunityDataSource(
             val uid = requireUserId()
             val cleanShopId = shopId.trim()
             val cleanComment = comment.trim()
-            val authorName = (auth.currentUser?.displayName?.trim().takeIf { !it.isNullOrEmpty() }
+            val authorName = (auth?.currentUser?.displayName?.trim().takeIf { !it.isNullOrEmpty() }
                 ?: "Dhaka Coffee Lover").take(60)
 
             require(cleanShopId.matches(ID_REGEX) && cleanShopId.length <= 128) {
@@ -266,6 +353,20 @@ class FirestoreCommunityDataSource(
         const val SHOP_REVIEWS_COLLECTION = "shop_reviews"
         private val ID_REGEX = Regex("^[a-zA-Z0-9_\\-]+$")
     }
+}
+
+class UnavailableCommunityDataSource : CommunityDataSource {
+    override fun observeCommunityShops(): Flow<List<CoffeeShop>> = flowOf(emptyList())
+    override fun observePublicReviews(): Flow<List<ShopReview>> = flowOf(emptyList())
+
+    override suspend fun addCommunityShop(draft: NewCoffeeShopInput): Result<Unit> =
+        Result.failure(IllegalStateException("Cloud community publishing is unavailable in this build."))
+
+    override suspend fun submitReview(shopId: String, rating: Int, comment: String): Result<Unit> =
+        Result.failure(IllegalStateException("Cloud reviews are unavailable in this build."))
+
+    override suspend fun deleteReview(reviewId: String): Result<Unit> =
+        Result.failure(IllegalStateException("Cloud reviews are unavailable in this build."))
 }
 
 class InMemoryCommunityDataSource(

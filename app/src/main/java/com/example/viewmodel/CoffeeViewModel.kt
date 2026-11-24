@@ -6,21 +6,21 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.R
 import com.example.data.AssetCoffeeLoader
 import com.example.data.CoffeeRepository
 import com.example.data.DataStoreFavoritesStorage
 import com.example.data.FavoritesStorage
+import com.example.data.FirebaseSafeAccess
 import com.example.data.FirestoreCommunityDataSource
 import com.example.data.InMemoryFavoritesStorage
 import com.example.data.IndexedCoffeeCatalog
 import com.example.data.NewCoffeeShopInput
+import com.example.data.UnavailableCommunityDataSource
 import com.example.model.CoffeeShop
 import com.example.model.DhakaArea
 import com.example.model.ShopReview
 import com.example.model.ShopTimeParser
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
@@ -394,15 +394,20 @@ class CoffeeViewModel(
 
         fun factory(context: Context): ViewModelProvider.Factory {
             val appContext = context.applicationContext
-            val databaseId = appContext.getString(R.string.firestore_database_id)
-            val db = FirebaseFirestore.getInstance(databaseId)
+            val db = FirebaseSafeAccess.safeFirestore(appContext)
+            val auth = FirebaseSafeAccess.safeAuth(appContext)
+            val communityDataSource = if (db != null) {
+                FirestoreCommunityDataSource(db = db, auth = auth)
+            } else {
+                UnavailableCommunityDataSource()
+            }
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     return CoffeeViewModel(
                         repository = CoffeeRepository(
                             assetLoader = AssetCoffeeLoader(appContext),
-                            communityDataSource = FirestoreCommunityDataSource(db)
+                            communityDataSource = communityDataSource
                         ),
                         favoritesStorage = DataStoreFavoritesStorage(appContext)
                     ) as T

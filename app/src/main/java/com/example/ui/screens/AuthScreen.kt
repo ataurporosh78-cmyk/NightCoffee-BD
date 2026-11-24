@@ -27,6 +27,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +51,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.example.R
+import com.example.data.FirebaseSafeAccess
 import com.example.ui.theme.CaramelContainer
 import com.example.ui.theme.CaramelGold
 import com.example.ui.theme.ClosedRed
@@ -64,9 +66,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-import com.google.firebase.Firebase
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.auth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
@@ -76,11 +76,14 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AuthScreen(
     onAuthSuccess: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onContinueAsGuest: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val credentialManager = remember(context) { CredentialManager.create(context) }
+    val credentialManager = remember(context) {
+        runCatching { CredentialManager.create(context) }.getOrNull()
+    }
     var isLoading by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
 
@@ -229,6 +232,26 @@ fun AuthScreen(
                             )
                         }
                     }
+
+                    if (onContinueAsGuest != null) {
+                        OutlinedButton(
+                            onClick = onContinueAsGuest,
+                            enabled = !isLoading,
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, CocoaBorder),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = WarmCream),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("continue_as_guest_button")
+                        ) {
+                            Text(
+                                text = stringResource(R.string.auth_continue_guest),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -237,21 +260,32 @@ fun AuthScreen(
 
 fun attemptAutoSignIn(
     context: Context,
-    credentialManager: CredentialManager,
+    credentialManager: CredentialManager?,
     onAuthSuccess: () -> Unit,
     onUnauthenticated: () -> Unit,
     scope: CoroutineScope
 ) {
-    if (Firebase.auth.currentUser != null) {
-        onAuthSuccess()
-        return
-    }
-    val clientId = try {
-        context.getString(R.string.default_web_client_id)
-    } catch (_: Exception) {
+    val auth = FirebaseSafeAccess.safeAuth(context) ?: run {
         onUnauthenticated()
         return
     }
+    if (auth.currentUser != null) {
+        onAuthSuccess()
+        return
+    }
+    if (!FirebaseSafeAccess.hasValidGoogleWebClientId(context)) {
+        onUnauthenticated()
+        return
+    }
+    val cm = credentialManager ?: run {
+        onUnauthenticated()
+        return
+    }
+    val clientId = runCatching { context.getString(R.string.default_web_client_id).trim() }
+        .getOrElse {
+            onUnauthenticated()
+            return
+        }
     val googleIdOption = GetGoogleIdOption.Builder()
         .setFilterByAuthorizedAccounts(true)
         .setServerClientId(clientId)
@@ -266,10 +300,10 @@ fun attemptAutoSignIn(
                 onUnauthenticated()
                 return@launch
             }
-            val cred = credentialManager.getCredential(activityContext, request).credential
+            val cred = cm.getCredential(activityContext, request).credential
             if (cred is CustomCredential && cred.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val token = GoogleIdTokenCredential.createFrom(cred.data).idToken
-                Firebase.auth.signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
+                auth.signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
                 onAuthSuccess()
             } else {
                 onUnauthenticated()
@@ -282,18 +316,29 @@ fun attemptAutoSignIn(
 
 fun onGoogleSignInClicked(
     context: Context,
-    credentialManager: CredentialManager,
+    credentialManager: CredentialManager?,
     onAuthSuccess: () -> Unit,
     onAuthError: (String) -> Unit,
     onAuthCancelled: () -> Unit,
     scope: CoroutineScope
 ) {
-    val clientId = try {
-        context.getString(R.string.default_web_client_id)
-    } catch (_: Exception) {
-        onAuthError("Google Sign-In configuration missing: default_web_client_id not found")
+    val auth = FirebaseSafeAccess.safeAuth(context) ?: run {
+        onAuthError(context.getString(R.string.auth_unavailable_msg))
         return
     }
+    if (!FirebaseSafeAccess.hasValidGoogleWebClientId(context)) {
+        onAuthError(context.getString(R.string.auth_unavailable_msg))
+        return
+    }
+    val cm = credentialManager ?: run {
+        onAuthError("Credential Manager is unavailable on this device.")
+        return
+    }
+    val clientId = runCatching { context.getString(R.string.default_web_client_id).trim() }
+        .getOrElse {
+            onAuthError("Google Sign-In configuration missing: default_web_client_id not found")
+            return
+        }
     val activityContext = context as? Activity ?: run {
         onAuthError("Sign-in requires an active screen context.")
         return
@@ -304,10 +349,10 @@ fun onGoogleSignInClicked(
         .build()
     scope.launch {
         try {
-            val cred = credentialManager.getCredential(activityContext, request).credential
+            val cred = cm.getCredential(activityContext, request).credential
             if (cred is CustomCredential && cred.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val token = GoogleIdTokenCredential.createFrom(cred.data).idToken
-                Firebase.auth.signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
+                auth.signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
                 onAuthSuccess()
             } else {
                 onAuthError("Unexpected credential type received.")
@@ -323,18 +368,19 @@ fun onGoogleSignInClicked(
 }
 
 fun signOut(
-    credentialManager: CredentialManager,
+    context: Context,
+    credentialManager: CredentialManager?,
     scope: CoroutineScope,
     onSignOutComplete: () -> Unit = {}
 ) {
     scope.launch {
         withContext(NonCancellable) {
             try {
-                credentialManager.clearCredentialState(ClearCredentialStateRequest())
+                credentialManager?.clearCredentialState(ClearCredentialStateRequest())
             } catch (e: Exception) {
                 Log.w("Auth", "Failed to clear credential state: ${e.message}")
             } finally {
-                Firebase.auth.signOut()
+                runCatching { FirebaseSafeAccess.safeAuth(context)?.signOut() }
                 onSignOutComplete()
             }
         }
