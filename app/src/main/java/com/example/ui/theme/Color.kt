@@ -10,6 +10,7 @@ val RoastedBeanElevated = Color(0xFF332823)
 val CocoaBorder = Color(0xFF473831)
 
 val CaramelGold = Color(0xFFD4A373)
+val CremaGold = CaramelGold
 val DarkEspressoInk = Color(0xFF24170E)
 val CaramelContainer = Color(0xFF463122)
 val WarmCream = Color(0xFFF5EFE6)

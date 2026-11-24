@@ -61,4 +61,7 @@
     <string name="error_no_maps_app">No maps app found to open directions</string>
     <string name="error_no_dialer_app">No phone dialer app available</string>
     <string name="rating_out_of_five">%1$.1f / 5.0</string>
+    <string name="action_call_shop">Call Shop</string>
+    <string name="action_view_on_maps">View on Maps</string>
+    <string name="default_web_client_id" translatable="false">placeholder_web_client_id</string>
 </resources>

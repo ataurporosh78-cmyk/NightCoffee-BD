@@ -48,18 +48,20 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun `DhakaArea includes all 14 requested filter entries`() {
+    fun `DhakaArea includes all 26 Dhaka filter entries covering all 120 cafes`() {
         val names = DhakaArea.entries.map { it.displayName }
-        assertEquals(14, names.size)
-        assertEquals(
+        assertEquals(26, names.size)
+        assertTrue(names.containsAll(
             listOf(
                 "All", "Dhanmondi", "Gulshan", "Banani", "Uttara",
                 "Bashundhara", "Baridhara", "Mirpur", "Mohammadpur",
-                "Khilgaon", "Bailey Road", "Old Dhaka", "Keraniganj", "Other"
-            ),
-            names
-        )
-        assertEquals(13, DhakaArea.selectableAreas.size)
+                "Lalmatia", "Khilgaon", "Bailey Road", "Malibagh",
+                "Mugda", "Tejgaon", "Farmgate", "Badda", "Aftabnagar",
+                "Banasree", "Motijheel", "Shantinagar", "Bijoynagar",
+                "Kakrail", "Old Dhaka", "Keraniganj", "Other"
+            )
+        ))
+        assertEquals(25, DhakaArea.selectableAreas.size)
         assertFalse(DhakaArea.selectableAreas.contains(DhakaArea.ALL))
     }
 
@@ -85,7 +87,7 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun `coffee_shops asset parses cleanly via Moshi with mixed 12h and 24h times`() {
+    fun `coffee_shops asset parses all 120 deduplicated Dhaka shops cleanly via Moshi`() {
         val candidatePaths = listOf(
             "src/main/assets/coffee_shops.json",
             "app/src/main/assets/coffee_shops.json"
@@ -97,15 +99,18 @@ class ExampleUnitTest {
 
         val parsed = adapter.fromJson(assetFile.readText())
         assertNotNull(parsed)
-        assertEquals(3, parsed!!.size)
+        assertEquals(120, parsed!!.size)
 
         val domainShops = parsed.map { it.toDomain() }
-        assertEquals("North End Coffee Roasters", domainShops[0].name)
-        assertEquals("Tabaq Coffee", domainShops[1].name)
-        assertEquals("Kiva Han Coffee", domainShops[2].name)
-        // Kiva Han uses 24h "16:00" - "03:00" in JSON, formatted cleanly to 12h range
-        assertEquals("4:00 PM - 3:00 AM", domainShops[2].hoursDisplay)
-        assertTrue(domainShops[2].isOpenAt(90))
+        assertEquals(120, domainShops.map { it.id }.toSet().size)
+        assertEquals("NORTH END Coffee Roasters (Banani)", domainShops.first().name)
+        assertEquals("Crimson Cup Coffee (Wari)", domainShops.last().name)
+        assertTrue(domainShops.none { it.area == DhakaArea.OTHER })
+        assertTrue(domainShops.all { it.popularMenu.isNotEmpty() && it.fullAddress.isNotBlank() })
+        // Cha bella uses 24h "15:00" - "02:00" in JSON, formatted cleanly to 12h range
+        val chaBella = domainShops.first { it.name == "Cha bella" }
+        assertEquals("3:00 PM - 2:00 AM", chaBella.hoursDisplay)
+        assertTrue(chaBella.isOpenAt(90))
     }
 
     @Test

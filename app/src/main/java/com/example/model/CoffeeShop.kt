@@ -24,8 +24,20 @@ enum class DhakaArea(val displayName: String) {
     BARIDHARA("Baridhara"),
     MIRPUR("Mirpur"),
     MOHAMMADPUR("Mohammadpur"),
+    LALMATIA("Lalmatia"),
     KHILGAON("Khilgaon"),
     BAILEY_ROAD("Bailey Road"),
+    MALIBAGH("Malibagh"),
+    MUGDA("Mugda"),
+    TEJGAON("Tejgaon"),
+    FARMGATE("Farmgate"),
+    BADDA("Badda"),
+    AFTABNAGAR("Aftabnagar"),
+    BANASREE("Banasree"),
+    MOTIJHEEL("Motijheel"),
+    SHANTINAGAR("Shantinagar"),
+    BIJOYNAGAR("Bijoynagar"),
+    KAKRAIL("Kakrail"),
     OLD_DHAKA("Old Dhaka"),
     KERANIGANJ("Keraniganj"),
     OTHER("Other");
@@ -144,44 +156,72 @@ data class CoffeeShopJson(
         val resolvedArea = DhakaArea.fromRaw(area)
         val openMin = ShopTimeParser.parseMinuteOfDay(openTime)
         val closeMin = ShopTimeParser.parseMinuteOfDay(closeTime)
+        val cleanAddress = address.trim()
+        val cleanPhone = phone.trim()
+        val cleanItems = popularItems.map { it.trim() }.filter { it.isNotEmpty() }
+        val derivedMenu = cleanItems.map { item ->
+            val match = Regex("""^(.+?)\s*\(([^)]+)\)$""").matchEntire(item)
+            if (match != null) {
+                MenuItem(name = match.groupValues[1].trim(), price = match.groupValues[2].trim())
+            } else {
+                MenuItem(name = item, price = priceRange.trim())
+            }
+        }
         return CoffeeShop(
             id = id.ifBlank { name.lowercase(Locale.US).replace(Regex("[^a-z0-9]+"), "-") },
             name = name.trim(),
             area = resolvedArea,
             areaLabel = area.trim().ifBlank { resolvedArea.displayName },
-            address = address.trim(),
+            address = cleanAddress,
+            fullAddress = cleanAddress,
             openTime = openTime.trim(),
             closeTime = closeTime.trim(),
             hoursDisplay = ShopTimeParser.formatHoursRange(openTime, closeTime),
             openMinuteOfDay = openMin,
             closeMinuteOfDay = closeMin,
-            popularItems = popularItems.map { it.trim() }.filter { it.isNotEmpty() },
+            popularItems = cleanItems,
             priceRange = priceRange.trim(),
             rating = rating.coerceIn(0.0, 5.0),
-            phone = phone.trim(),
+            phone = cleanPhone,
+            phoneNumber = cleanPhone,
             isFamilyFriendly = isFamilyFriendly,
+            popularMenu = derivedMenu,
             isCommunitySubmitted = false
         )
     }
 }
 
 @Immutable
+@Keep
+data class MenuItem(
+    val name: String = "",
+    val price: String = ""
+)
+
+@Immutable
 data class CoffeeShop(
-    val id: String,
-    val name: String,
-    val area: DhakaArea,
-    val areaLabel: String,
-    val address: String,
-    val openTime: String,
-    val closeTime: String,
-    val hoursDisplay: String,
-    val openMinuteOfDay: Int?,
-    val closeMinuteOfDay: Int?,
-    val popularItems: List<String>,
-    val priceRange: String,
-    val rating: Double,
-    val phone: String,
-    val isFamilyFriendly: Boolean,
+    val id: String = "",
+    val name: String = "",
+    val area: DhakaArea = DhakaArea.OTHER,
+    val areaLabel: String = area.displayName,
+    val address: String = "",
+    val fullAddress: String = address,
+    val openTime: String = "10:00 AM",
+    val closeTime: String = "02:00 AM",
+    val hoursDisplay: String = ShopTimeParser.formatHoursRange(openTime, closeTime),
+    val openMinuteOfDay: Int? = ShopTimeParser.parseMinuteOfDay(openTime),
+    val closeMinuteOfDay: Int? = ShopTimeParser.parseMinuteOfDay(closeTime),
+    val popularItems: List<String> = emptyList(),
+    val priceRange: String = "৳250 - ৳550",
+    val rating: Double = 4.5,
+    val phone: String = "",
+    val phoneNumber: String = phone,
+    val isFamilyFriendly: Boolean = true,
+    val latitude: Double = 23.7925,
+    val longitude: Double = 90.4078,
+    val ambianceNote: String = "Cozy night coffee spot",
+    val popularMenu: List<MenuItem> = emptyList(),
+    val imageRes: Int = 0,
     val isCommunitySubmitted: Boolean = false
 ) {
     private val searchCorpus: String = buildString {
