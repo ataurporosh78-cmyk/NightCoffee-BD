@@ -1,0 +1,40 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidImageUpload() {
+      return request.resource != null &&
+             request.resource.size <= 2 * 1024 * 1024 &&
+             request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+    }
+
+    match /review_photos/{shopId}/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() &&
+                      request.auth.uid == userId &&
+                      fileName.matches('^[a-zA-Z0-9_\\-\\.]{1,128}$') &&
+                      isValidImageUpload();
+    }
+
+    match /menu_photos/{shopId}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() &&
+                      fileName.matches('^[a-zA-Z0-9_\\-\\.]{1,128}$') &&
+                      isValidImageUpload();
+    }
+
+    match /event_banners/{eventId}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() &&
+                      fileName.matches('^[a-zA-Z0-9_\\-\\.]{1,128}$') &&
+                      isValidImageUpload();
+    }
+  }
+}

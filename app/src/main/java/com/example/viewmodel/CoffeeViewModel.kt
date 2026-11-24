@@ -14,10 +14,14 @@ import com.example.data.FirebaseSafeAccess
 import com.example.data.FirestoreCommunityDataSource
 import com.example.data.InMemoryFavoritesStorage
 import com.example.data.IndexedCoffeeCatalog
+import com.example.data.LocationProvider
 import com.example.data.NewCoffeeShopInput
 import com.example.data.UnavailableCommunityDataSource
 import com.example.model.CoffeeShop
 import com.example.model.DhakaArea
+import com.example.model.ExploreCategory
+import com.example.model.ShopEnrichment
+import com.example.model.ShopFacility
 import com.example.model.ShopReview
 import com.example.model.ShopTimeParser
 import com.google.firebase.Timestamp
@@ -52,7 +56,9 @@ data class CoffeeShopListItem(
     val isOpenNow: Boolean,
     val isFavorite: Boolean,
     val effectiveRating: Double,
-    val reviewCount: Int
+    val reviewCount: Int,
+    val distanceKm: Double? = null,
+    val isOpenAfterMidnight: Boolean = shop.isOpenAfterMidnight
 )
 
 @Immutable
@@ -66,22 +72,32 @@ data class CoffeeHomeUiState(
     val isLoading: Boolean = true,
     val searchQuery: String = "",
     val selectedTab: HomeTab = HomeTab.ALL_CAFES,
+    val selectedCategory: ExploreCategory = ExploreCategory.ALL,
     val openNowOnly: Boolean = false,
     val familyFriendlyOnly: Boolean = false,
     val selectedArea: DhakaArea = DhakaArea.ALL,
     val localTimeDisplay: String = "",
     val totalCatalogSize: Int = 0,
     val favoritesCount: Int = 0,
+    val hasLocationPermission: Boolean = false,
     val shops: List<CoffeeShopListItem> = emptyList(),
+    val featuredShops: List<CoffeeShopListItem> = emptyList(),
+    val openNowShops: List<CoffeeShopListItem> = emptyList(),
+    val popularShops: List<CoffeeShopListItem> = emptyList(),
+    val favoriteShops: List<CoffeeShopListItem> = emptyList(),
+    val allCatalogItems: List<CoffeeShopListItem> = emptyList(),
     val errorMessage: String? = null,
     val isSubmittingAction: Boolean = false
 )
 
 private data class HomeFilterState(
     val selectedTab: HomeTab = HomeTab.ALL_CAFES,
+    val selectedCategory: ExploreCategory = ExploreCategory.ALL,
     val openNowOnly: Boolean = false,
     val familyFriendlyOnly: Boolean = false,
     val selectedArea: DhakaArea = DhakaArea.ALL,
+    val userLocation: Pair<Double, Double>? = null,
+    val hasLocationPermission: Boolean = false,
     val refreshTick: Long = 0L
 )
 
@@ -218,8 +234,28 @@ class CoffeeViewModel(
         filterState.update { it.copy(selectedTab = tab) }
     }
 
+    fun selectCategory(category: ExploreCategory) {
+        filterState.update {
+            it.copy(
+                selectedCategory = category,
+                openNowOnly = category == ExploreCategory.OPEN_NOW
+            )
+        }
+    }
+
     fun setOpenNowOnly(enabled: Boolean) {
-        filterState.update { it.copy(openNowOnly = enabled) }
+        filterState.update {
+            it.copy(
+                openNowOnly = enabled,
+                selectedCategory = if (enabled) {
+                    ExploreCategory.OPEN_NOW
+                } else if (it.selectedCategory == ExploreCategory.OPEN_NOW) {
+                    ExploreCategory.ALL
+                } else {
+                    it.selectedCategory
+                }
+            )
+        }
     }
 
     fun setFamilyFriendlyOnly(enabled: Boolean) {
@@ -228,6 +264,27 @@ class CoffeeViewModel(
 
     fun selectArea(area: DhakaArea) {
         filterState.update { it.copy(selectedArea = area) }
+    }
+
+    fun refreshLocation(context: Context) {
+        val granted = LocationProvider.hasCoarseLocationPermission(context)
+        val coords = if (granted) LocationProvider.getLastKnownCoordinates(context) else null
+        filterState.update {
+            it.copy(
+                hasLocationPermission = granted,
+                userLocation = coords
+            )
+        }
+    }
+
+    fun updateLocation(latitude: Double?, longitude: Double?, hasPermission: Boolean) {
+        val coords = if (latitude != null && longitude != null) latitude to longitude else null
+        filterState.update {
+            it.copy(
+                hasLocationPermission = hasPermission,
+                userLocation = coords
+            )
+        }
     }
 
     fun toggleFavorite(shopId: String) {
@@ -239,7 +296,13 @@ class CoffeeViewModel(
     fun resetFilters() {
         _searchInputText.value = ""
         rawSearchQuery.value = ""
-        filterState.value = HomeFilterState(refreshTick = System.currentTimeMillis())
+        filterState.update { current ->
+            HomeFilterState(
+                userLocation = current.userLocation,
+                hasLocationPermission = current.hasLocationPermission,
+                refreshTick = System.currentTimeMillis()
+            )
+        }
     }
 
     fun refreshTime() {
@@ -256,14 +319,15 @@ class CoffeeViewModel(
             reviewsByShopFlow,
             favoritesStorage.favoriteIds,
             filterState
-        ) { catalog, reviewsByShop, favoriteIds, _ ->
+        ) { catalog, reviewsByShop, favoriteIds, filters ->
             val shop = catalog.byId[shopId] ?: return@combine null
             val shopReviews = reviewsByShop[shop.id].orEmpty()
             val item = toListItem(
                 shop = shop,
                 minuteOfDay = currentMinuteProvider(),
                 isFavorite = shop.id in favoriteIds,
-                shopReviews = shopReviews
+                shopReviews = shopReviews,
+                userLocation = filters.userLocation
             )
             CoffeeDetailState(item = item, reviews = shopReviews)
         }.flowOn(computeDispatcher)
@@ -315,20 +379,103 @@ class CoffeeViewModel(
         val minuteOfDay = currentMinuteProvider()
         val lowercaseQuery = filters.searchQuery.trim().lowercase(Locale.US)
         val areaSlice = base.catalog.sliceForArea(filters.filters.selectedArea)
+        val userLocation = filters.filters.userLocation
+        val category = filters.filters.selectedCategory
 
         val filteredList = areaSlice.mapNotNull { shop ->
             val isFavorite = shop.id in base.favoriteIds
             if (filters.filters.selectedTab == HomeTab.FAVORITES && !isFavorite) return@mapNotNull null
             if (filters.filters.familyFriendlyOnly && !shop.isFamilyFriendly) return@mapNotNull null
+
             val isOpen = shop.isOpenAt(minuteOfDay)
             if (filters.filters.openNowOnly && !isOpen) return@mapNotNull null
+
+            val matchesCategory = when (category) {
+                ExploreCategory.ALL -> true
+                ExploreCategory.OPEN_NOW -> isOpen
+                ExploreCategory.AFTER_MIDNIGHT -> shop.isOpenAfterMidnight
+                ExploreCategory.NEAR_ME -> true
+                ExploreCategory.ROOFTOP -> ShopFacility.ROOFTOP in shop.resolvedFacilities
+                ExploreCategory.WIFI -> ShopFacility.WIFI in shop.resolvedFacilities
+                ExploreCategory.QUIET -> ShopFacility.QUIET in shop.resolvedFacilities
+            }
+            if (!matchesCategory) return@mapNotNull null
             if (!shop.matchesQuery(lowercaseQuery)) return@mapNotNull null
 
             toListItem(
                 shop = shop,
                 minuteOfDay = minuteOfDay,
                 isFavorite = isFavorite,
-                shopReviews = base.reviewsByShop[shop.id].orEmpty()
+                shopReviews = base.reviewsByShop[shop.id].orEmpty(),
+                userLocation = userLocation
+            )
+        }.let { items ->
+            if (category == ExploreCategory.NEAR_ME && userLocation != null) {
+                items.sortedWith(compareBy<CoffeeShopListItem> { it.distanceKm ?: Double.MAX_VALUE }
+                    .thenByDescending { it.effectiveRating })
+            } else if (category == ExploreCategory.NEAR_ME) {
+                val popularNearOrder = listOf(
+                    DhakaArea.BANANI,
+                    DhakaArea.GULSHAN,
+                    DhakaArea.DHANMONDI,
+                    DhakaArea.UTTARA,
+                    DhakaArea.BASHUNDHARA
+                )
+                items.sortedWith(compareBy<CoffeeShopListItem> {
+                    val idx = popularNearOrder.indexOf(it.shop.area)
+                    if (idx == -1) Int.MAX_VALUE else idx
+                }.thenByDescending { it.effectiveRating })
+            } else {
+                items
+            }
+        }
+
+        // Curated Home shelves respect selectedArea & userLocation seamlessly
+        val homeSourceItems = areaSlice.map { shop ->
+            toListItem(
+                shop = shop,
+                minuteOfDay = minuteOfDay,
+                isFavorite = shop.id in base.favoriteIds,
+                shopReviews = base.reviewsByShop[shop.id].orEmpty(),
+                userLocation = userLocation
+            )
+        }
+
+        val featuredShops = homeSourceItems
+            .sortedWith(compareByDescending<CoffeeShopListItem> { it.isOpenNow }
+                .thenByDescending { it.isOpenAfterMidnight }
+                .thenByDescending { it.effectiveRating })
+            .take(8)
+
+        val openNowShops = homeSourceItems
+            .filter { it.isOpenNow }
+            .sortedByDescending { it.effectiveRating }
+            .take(12)
+
+        val popularShops = homeSourceItems
+            .sortedWith(compareByDescending<CoffeeShopListItem> { it.effectiveRating }
+                .thenByDescending { it.reviewCount })
+            .take(15)
+
+        val favoriteShops = base.catalog.allShops
+            .filter { it.id in base.favoriteIds }
+            .map { shop ->
+                toListItem(
+                    shop = shop,
+                    minuteOfDay = minuteOfDay,
+                    isFavorite = true,
+                    shopReviews = base.reviewsByShop[shop.id].orEmpty(),
+                    userLocation = userLocation
+                )
+            }
+
+        val allCatalogItems = base.catalog.allShops.map { shop ->
+            toListItem(
+                shop = shop,
+                minuteOfDay = minuteOfDay,
+                isFavorite = shop.id in base.favoriteIds,
+                shopReviews = base.reviewsByShop[shop.id].orEmpty(),
+                userLocation = userLocation
             )
         }
 
@@ -336,13 +483,20 @@ class CoffeeViewModel(
             isLoading = !base.catalogLoaded,
             searchQuery = filters.searchQuery,
             selectedTab = filters.filters.selectedTab,
+            selectedCategory = category,
             openNowOnly = filters.filters.openNowOnly,
             familyFriendlyOnly = filters.filters.familyFriendlyOnly,
             selectedArea = filters.filters.selectedArea,
             localTimeDisplay = currentTimeFormatter(),
             totalCatalogSize = base.catalog.allShops.size,
             favoritesCount = base.favoriteIds.size,
+            hasLocationPermission = filters.filters.hasLocationPermission,
             shops = filteredList,
+            featuredShops = featuredShops,
+            openNowShops = openNowShops,
+            popularShops = popularShops,
+            favoriteShops = favoriteShops,
+            allCatalogItems = allCatalogItems,
             errorMessage = filters.errorMessage,
             isSubmittingAction = filters.submitting
         )
@@ -352,15 +506,21 @@ class CoffeeViewModel(
         shop: CoffeeShop,
         minuteOfDay: Int,
         isFavorite: Boolean,
-        shopReviews: List<ShopReview>
+        shopReviews: List<ShopReview>,
+        userLocation: Pair<Double, Double>?
     ): CoffeeShopListItem {
         val effectiveRating = computeEffectiveRating(shop.rating, shopReviews)
+        val distanceKm = userLocation?.let { (uLat, uLng) ->
+            ShopEnrichment.haversineKm(uLat, uLng, shop.latitude, shop.longitude)
+        }
         return CoffeeShopListItem(
             shop = shop,
             isOpenNow = shop.isOpenAt(minuteOfDay),
             isFavorite = isFavorite,
             effectiveRating = effectiveRating,
-            reviewCount = shopReviews.size
+            reviewCount = shopReviews.size,
+            distanceKm = distanceKm,
+            isOpenAfterMidnight = shop.isOpenAfterMidnight
         )
     }
 

@@ -11,6 +11,8 @@ import com.example.data.UnavailableCommunityDataSource
 import com.example.model.CoffeeShop
 import com.example.model.CoffeeShopJson
 import com.example.model.DhakaArea
+import com.example.model.ExploreCategory
+import com.example.model.ShopFacility
 import com.example.model.ShopTimeParser
 import com.example.viewmodel.CoffeeViewModel
 import com.example.viewmodel.HomeTab
@@ -270,5 +272,82 @@ class ExampleUnitTest {
         val fallbackShops = DhakaCoffeeShopRepository().getCoffeeShops()
         assertTrue(fallbackShops.isNotEmpty())
         assertTrue(fallbackShops.all { it.id.isNotBlank() && it.name.isNotBlank() })
+    }
+
+    @Test
+    fun `ExploreCategory filters after-midnight, facilities, and Near Me distance sorting`() = runTest {
+        val nearBanani = CoffeeShop(
+            id = "near-banani",
+            name = "Skyline Terrace Banani",
+            area = DhakaArea.BANANI,
+            areaLabel = "Banani",
+            address = "Rooftop Level 9, Road 11, Banani",
+            openTime = "04:00 PM",
+            closeTime = "02:00 AM",
+            hoursDisplay = "4:00 PM - 2:00 AM",
+            openMinuteOfDay = 16 * 60,
+            closeMinuteOfDay = 2 * 60,
+            rating = 4.6,
+            latitude = DhakaArea.BANANI.latitude,
+            longitude = DhakaArea.BANANI.longitude,
+            facilities = setOf(ShopFacility.ROOFTOP, ShopFacility.WIFI, ShopFacility.LATE_NIGHT)
+        )
+        val farUttara = CoffeeShop(
+            id = "far-uttara",
+            name = "Quiet Library Roast Uttara",
+            area = DhakaArea.UTTARA,
+            areaLabel = "Uttara",
+            address = "Sector 7, Uttara",
+            openTime = "10:00 AM",
+            closeTime = "11:00 PM",
+            hoursDisplay = "10:00 AM - 11:00 PM",
+            openMinuteOfDay = 10 * 60,
+            closeMinuteOfDay = 23 * 60,
+            rating = 4.9,
+            latitude = DhakaArea.UTTARA.latitude,
+            longitude = DhakaArea.UTTARA.longitude,
+            facilities = setOf(ShopFacility.QUIET, ShopFacility.WIFI)
+        )
+
+        val viewModel = CoffeeViewModel(
+            repository = CoffeeRepository(
+                assetLoader = InMemoryCoffeeAssetLoader(listOf(farUttara, nearBanani)),
+                communityDataSource = InMemoryCommunityDataSource()
+            ),
+            favoritesStorage = InMemoryFavoritesStorage(),
+            currentMinuteProvider = { 90 }, // 1:30 AM
+            currentTimeFormatter = { "1:30 AM" },
+            computeDispatcher = testDispatcher,
+            searchDebounceMs = 0L
+        )
+
+        val collectJob = launch(testDispatcher) { viewModel.uiState.collect() }
+
+        assertTrue(ShopTimeParser.isOpenAfterMidnight(16 * 60, 2 * 60))
+        assertFalse(ShopTimeParser.isOpenAfterMidnight(10 * 60, 23 * 60))
+
+        // After Midnight filter returns only nearBanani
+        viewModel.selectCategory(ExploreCategory.AFTER_MIDNIGHT)
+        assertEquals(listOf("near-banani"), viewModel.uiState.value.shops.map { it.shop.id })
+
+        // Quiet Places filter returns only farUttara
+        viewModel.selectCategory(ExploreCategory.QUIET)
+        assertEquals(listOf("far-uttara"), viewModel.uiState.value.shops.map { it.shop.id })
+
+        // Near Me sorting with Banani coordinates places nearBanani first and computes distanceKm
+        viewModel.updateLocation(DhakaArea.BANANI.latitude, DhakaArea.BANANI.longitude, true)
+        viewModel.selectCategory(ExploreCategory.NEAR_ME)
+        val nearMeList = viewModel.uiState.value.shops
+        assertEquals(2, nearMeList.size)
+        assertEquals("near-banani", nearMeList.first().shop.id)
+        assertNotNull(nearMeList.first().distanceKm)
+        assertTrue(nearMeList[0].distanceKm!! < nearMeList[1].distanceKm!!)
+
+        // Curated home shelves are populated
+        assertTrue(viewModel.uiState.value.featuredShops.isNotEmpty())
+        assertEquals(1, viewModel.uiState.value.openNowShops.size)
+        assertEquals(2, viewModel.uiState.value.popularShops.size)
+
+        collectJob.cancel()
     }
 }

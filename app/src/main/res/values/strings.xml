@@ -71,4 +71,129 @@
     <string name="auth_sign_in_desc">Sign in</string>
     <string name="auth_sign_in_to_review">Sign in to Post Review</string>
     <string name="auth_unavailable_msg">Cloud sign-in is unavailable in this build. You can still browse all local Dhaka cafes as a guest.</string>
+    <string name="home_greeting_evening">Good Evening</string>
+    <string name="home_greeting_subtitle">Find your perfect midnight coffee.</string>
+    <string name="home_search_prompt">Search cafes, areas, or signature brews…</string>
+    <string name="home_section_featured">Featured Spotlights</string>
+    <string name="home_section_open_now">Open Right Now</string>
+    <string name="home_section_popular">Popular Night Spots</string>
+    <string name="home_see_all">See All</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_explore">Explore</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="nav_profile">Profile</string>
+    <string name="explore_title">Explore Dhaka</string>
+    <string name="explore_subtitle">120+ late-night coffee spots across the city</string>
+    <string name="filter_all_shops">All Shops</string>
+    <string name="filter_after_midnight">Open After 12 AM</string>
+    <string name="filter_near_me">Near Me</string>
+    <string name="filter_rooftop">Rooftop</string>
+    <string name="filter_wifi">Wi-Fi</string>
+    <string name="filter_quiet">Quiet Places</string>
+    <string name="favorites_title">Saved Cafes</string>
+    <string name="favorites_subtitle">Your bookmarked late-night hangouts</string>
+    <string name="profile_title">Night Explorer</string>
+    <string name="profile_guest_name">Guest Explorer</string>
+    <string name="profile_guest_hint">Sign in with Google to publish new cafes and post community reviews.</string>
+    <string name="profile_signed_in_badge">Verified Google Member</string>
+    <string name="profile_add_shop_title">Submit a Late-Night Cafe</string>
+    <string name="profile_add_shop_subtitle">Share a hidden espresso bar or rooftop lounge in Dhaka.</string>
+    <string name="profile_location_title">Nearby Distance</string>
+    <string name="profile_location_active">Approximate Dhaka location enabled</string>
+    <string name="profile_location_inactive">Enable coarse location to see km distances on cafe cards</string>
+    <string name="profile_location_enable">Enable</string>
+    <string name="location_permission_denied">Location permission denied. Showing popular Dhaka spots instead.</string>
+    <string name="location_unavailable">Unable to read device location right now. Ensure location is turned on.</string>
+    <string name="details_facilities_title">Atmosphere &amp; Facilities</string>
+    <string name="distance_km_format">%1$.1f km away</string>
+    <string name="distance_km_short">%1$.1f km</string>
+    <string name="default_notification_channel_id" translatable="false">nightcoffee_updates</string>
+
+    <!-- Live Shop Status -->
+    <string name="live_status_section_title">Live Status &amp; Hours</string>
+    <string name="status_scheduled_label">Scheduled Status</string>
+    <string name="status_reported_label">Last Reported Status</string>
+    <string name="status_verified_label">Verified Live Status</string>
+    <string name="status_temporarily_closed">Temporarily Closed</string>
+    <string name="status_closing_soon">Closing Soon</string>
+    <string name="status_report_button">Report Live Status</string>
+    <string name="status_report_incorrect_hours">Report Incorrect Hours</string>
+    <string name="status_unverified_notice">Unverified customer report — may not reflect official hours.</string>
+    <string name="status_stale_notice">Report is older than 3 hours and marked stale.</string>
+
+    <!-- Digital Menu -->
+    <string name="menu_screen_title">Digital Menu</string>
+    <string name="menu_offline_cached_badge">Offline Cached</string>
+    <string name="menu_empty_title">No digital menu published yet</string>
+    <string name="menu_empty_subtitle">Only verified menu items published by the cafe or admin are shown here. Popular items from the directory are listed below when available.</string>
+    <string name="menu_unavailable_badge">Sold Out</string>
+    <string name="menu_special_badge">Chef Special</string>
+    <string name="menu_manage_button">Add Menu Item</string>
+
+    <!-- Live Crowd Status -->
+    <string name="crowd_section_title">Live Crowd Level</string>
+    <string name="crowd_report_button">Report Crowd</string>
+    <string name="crowd_flag_incorrect">Flag Incorrect</string>
+    <string name="crowd_no_recent">No recent crowd reports in the last 2 hours.</string>
+    <string name="crowd_level_quiet">Quiet</string>
+    <string name="crowd_level_moderate">Moderate</string>
+    <string name="crowd_level_busy">Busy</string>
+    <string name="crowd_level_very_busy">Very Busy</string>
+
+    <!-- Offers & Coupons -->
+    <string name="offers_title">Offers &amp; Coupons</string>
+    <string name="offers_subtitle">Exclusive cafe discounts across Dhaka</string>
+    <string name="offers_tab_active">Active</string>
+    <string name="offers_tab_expired">Expired</string>
+    <string name="offers_empty">No active coupons published yet. Check back soon or explore nearby cafes.</string>
+    <string name="offers_save">Save</string>
+    <string name="offers_redeem">Redeem</string>
+    <string name="offers_redeemed">Redeemed</string>
+
+    <!-- Nearby Map -->
+    <string name="map_title">Nearby Map</string>
+    <string name="map_subtitle">Discover late-night cafes across Dhaka</string>
+    <string name="map_open_directions">Google Maps</string>
+    <string name="map_manual_area_hint">Location off — browsing by Dhaka area centers.</string>
+
+    <!-- Photo Reviews -->
+    <string name="reviews_screen_title">Customer Reviews</string>
+    <string name="reviews_add_photo">Add Photo</string>
+    <string name="reviews_helpful">Helpful (%1$d)</string>
+    <string name="reviews_report">Report</string>
+
+    <!-- Reservations -->
+    <string name="reservations_title">Table Reservations</string>
+    <string name="reservations_subtitle">Times in Dhaka local time (UTC+6)</string>
+    <string name="reservations_book_button">Request Reservation</string>
+    <string name="reservations_no_payment_note">No online payment collected. Confirmed by cafe staff.</string>
+    <string name="reservations_empty">No reservations yet. Select a cafe to request a table.</string>
+
+    <!-- Compare -->
+    <string name="compare_title">Compare Cafes</string>
+    <string name="compare_subtitle">Side-by-side comparison (up to 3 shops)</string>
+    <string name="compare_add_shop">Add Cafe</string>
+    <string name="compare_empty">Select 2 or 3 cafes from Explore or Shop Details to compare hours, rating, Wi-Fi, rooftop, and menu highlights.</string>
+
+    <!-- Events -->
+    <string name="events_title">Coffee Events</string>
+    <string name="events_subtitle">Workshops, tastings, live acoustic nights &amp; meetups</string>
+    <string name="events_empty">No upcoming events published right now.</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_subtitle">Alerts &amp; topic preferences</string>
+    <string name="notifications_empty">No notifications received yet.</string>
+    <string name="notifications_permission_title">Enable Push Alerts</string>
+    <string name="notifications_permission_desc">Allow notifications for reservation confirmations, saved cafe updates, and Dhaka coffee events.</string>
+
+    <!-- Help & Support -->
+    <string name="support_title">Help &amp; Support</string>
+    <string name="support_subtitle">FAQs, data corrections &amp; support tickets</string>
+    <string name="support_submit_ticket">Submit Ticket</string>
+
+    <!-- Admin Dashboard -->
+    <string name="admin_title">Admin &amp; Staff Console</string>
+    <string name="admin_subtitle">Verified moderation &amp; cafe management</string>
+    <string name="badge_verified_shop">Verified</string>
 </resources>

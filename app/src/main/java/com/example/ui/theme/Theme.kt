@@ -40,10 +40,10 @@ private val NightCoffeeDarkColorScheme = darkColorScheme(
 )
 
 val NightCoffeeShapes = Shapes(
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(26.dp)
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(22.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp)
 )
 
 @Composable

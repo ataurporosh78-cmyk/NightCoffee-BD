@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.LocalCafe
-import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,8 +39,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,13 +55,14 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.example.R
 import com.example.data.FirebaseSafeAccess
-import com.example.ui.theme.CaramelContainer
+import com.example.ui.components.LiquidGlassSurface
 import com.example.ui.theme.CaramelGold
 import com.example.ui.theme.ClosedRed
 import com.example.ui.theme.ClosedRedContainer
 import com.example.ui.theme.CocoaBorder
 import com.example.ui.theme.DarkEspressoInk
 import com.example.ui.theme.EspressoBlack
+import com.example.ui.theme.EspressoRich
 import com.example.ui.theme.MochaCardSurface
 import com.example.ui.theme.ToastedLatte
 import com.example.ui.theme.WarmCream
@@ -100,7 +104,15 @@ fun AuthScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(EspressoBlack)
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        EspressoRich.copy(alpha = 0.45f),
+                        EspressoBlack,
+                        EspressoBlack
+                    )
+                )
+            )
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(24.dp),
@@ -114,19 +126,17 @@ fun AuthScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = CaramelContainer,
+                shape = RoundedCornerShape(26.dp),
+                color = MochaCardSurface,
                 border = BorderStroke(1.dp, CaramelGold.copy(alpha = 0.5f)),
-                modifier = Modifier.size(84.dp)
+                modifier = Modifier.size(88.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.NightsStay,
-                        contentDescription = null,
-                        tint = CaramelGold,
-                        modifier = Modifier.size(42.dp)
-                    )
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.nightcoffee_liquid_fg),
+                    contentDescription = stringResource(R.string.app_name),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             Column(
@@ -153,10 +163,9 @@ fun AuthScreen(
                 )
             }
 
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = MochaCardSurface,
-                border = BorderStroke(1.dp, CocoaBorder),
+            LiquidGlassSurface(
+                shape = RoundedCornerShape(26.dp),
+                accentGlow = true,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(

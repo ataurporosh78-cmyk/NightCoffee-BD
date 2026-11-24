@@ -8,6 +8,8 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.storage.FirebaseStorage
 
 object FirebaseSafeAccess {
     private const val TAG = "FirebaseSafeAccess"
@@ -50,6 +52,26 @@ object FirebaseSafeAccess {
             }
         } catch (e: Exception) {
             Log.w(TAG, "FirebaseFirestore unavailable: ${e.message}")
+            null
+        }
+    }
+
+    fun safeStorage(context: Context): FirebaseStorage? {
+        if (!ensureInitialized(context)) return null
+        return try {
+            FirebaseStorage.getInstance()
+        } catch (e: Exception) {
+            Log.w(TAG, "FirebaseStorage unavailable: ${e.message}")
+            null
+        }
+    }
+
+    fun safeFunctions(context: Context): FirebaseFunctions? {
+        if (!ensureInitialized(context)) return null
+        return try {
+            FirebaseFunctions.getInstance()
+        } catch (e: Exception) {
+            Log.w(TAG, "FirebaseFunctions unavailable: ${e.message}")
             null
         }
     }

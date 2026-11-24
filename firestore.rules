@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Global safety net
+    // Global safety net: deny everything unless explicitly permitted below
     match /{document=**} {
       allow read, write: if false;
     }
@@ -23,34 +23,51 @@ service cloud.firestore {
       return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    function isAdmin() {
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true;
+    }
+
+    function isShopStaff(shopId) {
+      return isSignedIn() &&
+             isValidId(shopId) &&
+             exists(/databases/$(database)/documents/shop_staff/$(shopId + '_' + request.auth.uid)) &&
+             get(/databases/$(database)/documents/shop_staff/$(shopId + '_' + request.auth.uid)).data.active == true;
+    }
+
     function isValidArea(area) {
       return area in [
-        'Dhanmondi',
-        'Gulshan',
-        'Banani',
-        'Uttara',
-        'Bashundhara',
-        'Baridhara',
-        'Mirpur',
-        'Mohammadpur',
-        'Lalmatia',
-        'Khilgaon',
-        'Bailey Road',
-        'Malibagh',
-        'Mugda',
-        'Tejgaon',
-        'Farmgate',
-        'Badda',
-        'Aftabnagar',
-        'Banasree',
-        'Motijheel',
-        'Shantinagar',
-        'Bijoynagar',
-        'Kakrail',
-        'Old Dhaka',
-        'Keraniganj',
-        'Other'
+        'Dhanmondi', 'Gulshan', 'Banani', 'Uttara', 'Bashundhara',
+        'Baridhara', 'Mirpur', 'Mohammadpur', 'Lalmatia', 'Khilgaon',
+        'Bailey Road', 'Malibagh', 'Mugda', 'Tejgaon', 'Farmgate',
+        'Badda', 'Aftabnagar', 'Banasree', 'Motijheel', 'Shantinagar',
+        'Bijoynagar', 'Kakrail', 'Old Dhaka', 'Keraniganj', 'Other'
       ];
+    }
+
+    function isValidLiveStatus(status) {
+      return status in ['OPEN_NOW', 'CLOSED', 'TEMPORARILY_CLOSED', 'CLOSING_SOON'];
+    }
+
+    function isValidReportStatus(status) {
+      return status in ['OPEN_NOW', 'CLOSED', 'TEMPORARILY_CLOSED', 'CLOSING_SOON', 'INCORRECT_HOURS'];
+    }
+
+    function isValidMenuCategory(cat) {
+      return cat in ['Hot Coffee', 'Cold Coffee', 'Espresso', 'Cappuccino', 'Latte', 'Snacks', 'Desserts'];
+    }
+
+    function isValidCrowdLevel(level) {
+      return level in ['QUIET', 'MODERATE', 'BUSY', 'VERY_BUSY'];
+    }
+
+    function isValidEventCategory(cat) {
+      return cat in ['LIVE_MUSIC', 'COFFEE_WORKSHOP', 'COFFEE_TASTING', 'SPECIAL_OFFER', 'COMMUNITY_MEETUP'];
+    }
+
+    function isValidTicketType(t) {
+      return t in ['INCORRECT_SHOP_INFO', 'INCORRECT_PRICE', 'APP_PROBLEM', 'INAPPROPRIATE_REVIEW', 'GENERAL_SUPPORT'];
     }
 
     function isValidCommunityShop(data) {
@@ -68,7 +85,7 @@ service cloud.firestore {
              data.familyFriendly is bool;
     }
 
-    function isValidShopReview(data) {
+    function isValidLegacyShopReview(data) {
       return data.shopId is string && isValidId(data.shopId) &&
              data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
              data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 60 &&
@@ -77,9 +94,155 @@ service cloud.firestore {
              data.visibility == 'public';
     }
 
+    function isValidShopOverlay(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+             data.area is string && isValidArea(data.area) &&
+             data.address is string && data.address.size() >= 3 && data.address.size() <= 200 &&
+             data.openTime is string && data.openTime.size() >= 4 && data.openTime.size() <= 16 &&
+             data.closeTime is string && data.closeTime.size() >= 4 && data.closeTime.size() <= 16 &&
+             data.priceRange is string && data.priceRange.size() <= 40 &&
+             data.phone is string && data.phone.size() <= 24 &&
+             data.familyFriendly is bool &&
+             data.acAvailable is bool &&
+             data.wifiAvailable is bool &&
+             data.rooftopAvailable is bool &&
+             data.verified is bool &&
+             (!('verifiedBy' in data) || (data.verifiedBy is string && data.verifiedBy.size() <= 128)) &&
+             (!('ownerUid' in data) || (data.ownerUid is string && data.ownerUid.size() <= 128)) &&
+             (!('liveStatus' in data) || isValidLiveStatus(data.liveStatus)) &&
+             (!('liveStatusUpdatedBy' in data) || (data.liveStatusUpdatedBy is string && data.liveStatusUpdatedBy.size() <= 128)) &&
+             data.officialOverride is bool &&
+             data.visibility in ['public', 'hidden'];
+    }
+
+    function isValidStatusReport(data) {
+      return data.shopId is string && isValidId(data.shopId) &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.reporterName is string && data.reporterName.size() >= 1 && data.reporterName.size() <= 60 &&
+             data.reportedStatus is string && isValidReportStatus(data.reportedStatus) &&
+             data.note is string && data.note.size() <= 280 &&
+             data.staffReport is bool &&
+             data.verificationState in ['UNVERIFIED', 'VERIFIED', 'DISMISSED'] &&
+             data.visibility == 'public';
+    }
+
+    function isValidMenuItem(data) {
+      return data.shopId is string && isValidId(data.shopId) &&
+             data.category is string && isValidMenuCategory(data.category) &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+             data.description is string && data.description.size() <= 300 &&
+             data.imageUrl is string && data.imageUrl.size() <= 500 &&
+             data.priceBdt is int && data.priceBdt >= 1 && data.priceBdt <= 50000 &&
+             data.available is bool &&
+             data.special is bool &&
+             data.visibility in ['public', 'hidden'] &&
+             data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128;
+    }
+
+    function isValidCrowdReport(data) {
+      return data.shopId is string && isValidId(data.shopId) &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.level is string && isValidCrowdLevel(data.level) &&
+             data.note is string && data.note.size() <= 200 &&
+             data.flaggedIncorrectCount is int && data.flaggedIncorrectCount >= 0 &&
+             data.verificationState in ['ACTIVE', 'FLAGGED', 'DISMISSED'] &&
+             data.visibility == 'public' &&
+             data.expiresAt is timestamp;
+    }
+
+    function isValidCoupon(data) {
+      return data.shopId is string && data.shopId.size() >= 1 && data.shopId.size() <= 128 &&
+             data.shopName is string && data.shopName.size() >= 2 && data.shopName.size() <= 80 &&
+             data.code is string && data.code.size() >= 3 && data.code.size() <= 24 &&
+             data.title is string && data.title.size() >= 3 && data.title.size() <= 80 &&
+             data.description is string && data.description.size() <= 300 &&
+             data.discountType in ['PERCENTAGE', 'FIXED_BDT'] &&
+             data.discountValue is int &&
+             ((data.discountType == 'PERCENTAGE' && data.discountValue >= 1 && data.discountValue <= 90) ||
+              (data.discountType == 'FIXED_BDT' && data.discountValue >= 1 && data.discountValue <= 5000)) &&
+             data.minSpendBdt is int && data.minSpendBdt >= 0 &&
+             data.maxUsageLimit is int && data.maxUsageLimit >= 1 &&
+             data.redeemedCount is int && data.redeemedCount >= 0 &&
+             data.terms is string && data.terms.size() <= 500 &&
+             data.expiresAt is timestamp &&
+             data.active is bool &&
+             data.visibility in ['public', 'hidden'] &&
+             data.createdBy is string && data.createdBy.size() >= 1 && data.createdBy.size() <= 128;
+    }
+
+    function isValidPhotoReview(data) {
+      return data.shopId is string && isValidId(data.shopId) &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 60 &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() >= 1 && data.comment.size() <= 800 &&
+             data.photoUrls is list && data.photoUrls.size() <= 4 &&
+             (data.photoUrls.size() == 0 || (data.photoUrls[0] is string && data.photoUrls[0].matches('^https://.*'))) &&
+             data.helpfulCount is int && data.helpfulCount >= 0 &&
+             data.reportCount is int && data.reportCount >= 0 &&
+             data.visibility in ['public', 'hidden', 'flagged'];
+    }
+
+    function isValidReservation(data) {
+      return data.shopId is string && isValidId(data.shopId) &&
+             data.shopName is string && data.shopName.size() >= 2 && data.shopName.size() <= 80 &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.guestName is string && data.guestName.size() >= 2 && data.guestName.size() <= 80 &&
+             data.contactPhone is string && data.contactPhone.size() >= 6 && data.contactPhone.size() <= 24 &&
+             data.dateDhaka is string && data.dateDhaka.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+             data.timeSlot is string && data.timeSlot.size() >= 4 && data.timeSlot.size() <= 16 &&
+             data.guestCount is int && data.guestCount >= 1 && data.guestCount <= 20 &&
+             data.specialRequest is string && data.specialRequest.size() <= 300 &&
+             data.status in ['Pending', 'Confirmed', 'Rejected', 'Cancelled', 'Completed'] &&
+             data.staffNote is string && data.staffNote.size() <= 300;
+    }
+
+    function isValidEvent(data) {
+      return data.title is string && data.title.size() >= 3 && data.title.size() <= 100 &&
+             data.category is string && isValidEventCategory(data.category) &&
+             data.description is string && data.description.size() >= 5 && data.description.size() <= 1000 &&
+             data.imageUrl is string && data.imageUrl.size() <= 500 &&
+             (!('shopId' in data) || (data.shopId is string && data.shopId.size() <= 128)) &&
+             data.venueName is string && data.venueName.size() >= 2 && data.venueName.size() <= 120 &&
+             data.area is string && isValidArea(data.area) &&
+             data.eventDateDhaka is string && data.eventDateDhaka.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+             data.startTime is string && data.startTime.size() >= 4 && data.startTime.size() <= 16 &&
+             data.endTime is string && data.endTime.size() >= 4 && data.endTime.size() <= 16 &&
+             data.organizer is string && data.organizer.size() >= 2 && data.organizer.size() <= 80 &&
+             data.registrationInfo is string && data.registrationInfo.size() <= 300 &&
+             data.status in ['Upcoming', 'Ongoing', 'Completed', 'Cancelled'] &&
+             data.visibility in ['public', 'hidden'] &&
+             data.createdBy is string && data.createdBy.size() >= 1 && data.createdBy.size() <= 128;
+    }
+
+    function isValidSupportTicket(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.type is string && isValidTicketType(data.type) &&
+             data.targetId is string && data.targetId.size() <= 128 &&
+             data.targetName is string && data.targetName.size() <= 120 &&
+             data.subject is string && data.subject.size() >= 3 && data.subject.size() <= 120 &&
+             data.description is string && data.description.size() >= 5 && data.description.size() <= 1500 &&
+             data.contactInfo is string && data.contactInfo.size() <= 120 &&
+             data.status in ['Open', 'In Progress', 'Resolved', 'Closed'] &&
+             data.adminResponse is string && data.adminResponse.size() <= 1000;
+    }
+
+    // --- ROLE DOCUMENTS ---
+    match /admins/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    match /shop_staff/{staffId} {
+      allow get: if isSignedIn() && (existing().uid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().uid == request.auth.uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- PRESERVED LEGACY COLLECTIONS ---
     match /community_shops/{shopId} {
-      allow get: if isSignedIn() && isValidId(shopId) && existing().visibility == 'public';
-      allow list: if isSignedIn() && existing().visibility == 'public';
+      allow get: if isSignedIn() && isValidId(shopId) && (existing().visibility == 'public' || isAdmin());
+      allow list: if isSignedIn() && (existing().visibility == 'public' || isAdmin());
 
       allow create: if isSignedIn() &&
                        isValidId(shopId) &&
@@ -102,7 +265,7 @@ service cloud.firestore {
 
       allow update: if isSignedIn() &&
                        isValidId(shopId) &&
-                       existing().ownerId == request.auth.uid &&
+                       (existing().ownerId == request.auth.uid || isAdmin()) &&
                        isValidCommunityShop(incoming()) &&
                        incoming().ownerId == existing().ownerId &&
                        incoming().visibility == existing().visibility &&
@@ -116,12 +279,12 @@ service cloud.firestore {
 
       allow delete: if isSignedIn() &&
                        isValidId(shopId) &&
-                       existing().ownerId == request.auth.uid;
+                       (existing().ownerId == request.auth.uid || isAdmin());
     }
 
     match /shop_reviews/{reviewId} {
-      allow get: if isSignedIn() && isValidId(reviewId) && existing().visibility == 'public';
-      allow list: if isSignedIn() && existing().visibility == 'public';
+      allow get: if isSignedIn() && isValidId(reviewId) && (existing().visibility == 'public' || isAdmin());
+      allow list: if isSignedIn() && (existing().visibility == 'public' || isAdmin());
 
       allow create: if isSignedIn() &&
                        isValidId(reviewId) &&
@@ -134,7 +297,7 @@ service cloud.firestore {
                          'shopId', 'userId', 'authorName', 'rating',
                          'comment', 'visibility', 'createdAt', 'updatedAt'
                        ]) &&
-                       isValidShopReview(incoming()) &&
+                       isValidLegacyShopReview(incoming()) &&
                        incoming().createdAt is timestamp &&
                        incoming().createdAt <= request.time &&
                        incoming().updatedAt is timestamp &&
@@ -142,8 +305,8 @@ service cloud.firestore {
 
       allow update: if isSignedIn() &&
                        isValidId(reviewId) &&
-                       existing().userId == request.auth.uid &&
-                       isValidShopReview(incoming()) &&
+                       (existing().userId == request.auth.uid || isAdmin()) &&
+                       isValidLegacyShopReview(incoming()) &&
                        incoming().userId == existing().userId &&
                        incoming().shopId == existing().shopId &&
                        incoming().visibility == existing().visibility &&
@@ -156,7 +319,458 @@ service cloud.firestore {
 
       allow delete: if isSignedIn() &&
                        isValidId(reviewId) &&
-                       existing().userId == request.auth.uid;
+                       (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // --- FEATURE 1 & 10: SHOPS METADATA, VERIFIED BADGE & LIVE STATUS ---
+    match /shops/{shopId} {
+      allow get: if isValidId(shopId) && (existing().visibility == 'public' || isAdmin() || isShopStaff(shopId));
+      allow list: if existing().visibility == 'public' || isAdmin();
+
+      allow create: if isAdmin() &&
+                       isValidId(shopId) &&
+                       isValidShopOverlay(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isValidId(shopId) &&
+                       isValidShopOverlay(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       (
+                         isAdmin() ||
+                         (
+                           isShopStaff(shopId) &&
+                           incoming().verified == existing().verified &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'openTime', 'closeTime', 'priceRange', 'phone',
+                             'familyFriendly', 'acAvailable', 'wifiAvailable', 'rooftopAvailable',
+                             'liveStatus', 'liveStatusUpdatedAt', 'liveStatusUpdatedBy',
+                             'officialOverride', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isAdmin() && isValidId(shopId);
+    }
+
+    match /shop_status_reports/{reportId} {
+      allow get: if isValidId(reportId) && (existing().visibility == 'public' || isAdmin());
+      allow list: if existing().visibility == 'public' || isAdmin();
+
+      allow create: if isSignedIn() &&
+                       isValidId(reportId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().visibility == 'public' &&
+                       (isAdmin() || isShopStaff(incoming().shopId) ||
+                         (incoming().verificationState == 'UNVERIFIED' && incoming().staffReport == false)) &&
+                       isValidStatusReport(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isSignedIn() &&
+                       isValidId(reportId) &&
+                       isValidStatusReport(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().shopId == existing().shopId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       (isAdmin() || isShopStaff(existing().shopId));
+
+      allow delete: if isSignedIn() &&
+                       isValidId(reportId) &&
+                       (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // --- FEATURE 2: DIGITAL MENU & PRICE ---
+    match /menus/{shopId} {
+      allow get: if isValidId(shopId) && (existing().visibility == 'public' || isAdmin() || isShopStaff(shopId));
+      allow list: if existing().visibility == 'public' || isAdmin();
+
+      allow create, update: if (isAdmin() || isShopStaff(shopId)) &&
+                               isValidId(shopId) &&
+                               incoming().shopId == shopId &&
+                               incoming().currency == 'BDT' &&
+                               incoming().available is bool &&
+                               incoming().visibility in ['public', 'hidden'] &&
+                               incoming().updatedBy == request.auth.uid &&
+                               incoming().updatedAt is timestamp &&
+                               incoming().updatedAt <= request.time;
+
+      allow delete: if isAdmin() && isValidId(shopId);
+    }
+
+    match /menu_items/{itemId} {
+      allow get: if isValidId(itemId) && (existing().visibility == 'public' || isAdmin() || isShopStaff(existing().shopId));
+      allow list: if existing().visibility == 'public' || isAdmin();
+
+      allow create: if isValidId(itemId) &&
+                       (isAdmin() || isShopStaff(incoming().shopId)) &&
+                       incoming().updatedBy == request.auth.uid &&
+                       isValidMenuItem(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isValidId(itemId) &&
+                       (isAdmin() || isShopStaff(existing().shopId)) &&
+                       incoming().shopId == existing().shopId &&
+                       incoming().updatedBy == request.auth.uid &&
+                       isValidMenuItem(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow delete: if isValidId(itemId) && (isAdmin() || isShopStaff(existing().shopId));
+    }
+
+    // --- FEATURE 3: LIVE CROWD STATUS ---
+    match /crowd_reports/{reportId} {
+      allow get: if isValidId(reportId) && (existing().visibility == 'public' || isAdmin());
+      allow list: if existing().visibility == 'public' || isAdmin();
+
+      allow create: if isSignedIn() &&
+                       isValidId(reportId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().verificationState == 'ACTIVE' &&
+                       incoming().flaggedIncorrectCount == 0 &&
+                       incoming().visibility == 'public' &&
+                       isValidCrowdReport(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().expiresAt > incoming().createdAt;
+
+      allow update: if isAdmin() &&
+                       isValidId(reportId) &&
+                       isValidCrowdReport(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().shopId == existing().shopId &&
+                       incoming().createdAt == existing().createdAt;
+
+      allow delete: if isSignedIn() &&
+                       isValidId(reportId) &&
+                       (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /crowd_flags/{flagId} {
+      allow get, list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+                       flagId == (incoming().reportId + '_' + request.auth.uid) &&
+                       incoming().userId == request.auth.uid &&
+                       isValidId(incoming().reportId) &&
+                       incoming().reason is string && incoming().reason.size() >= 3 && incoming().reason.size() <= 200 &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time;
+      allow delete: if isAdmin();
+    }
+
+    // --- FEATURE 4: EXCLUSIVE OFFERS & COUPONS ---
+    match /coupons/{couponId} {
+      allow get: if isValidId(couponId) && (existing().visibility == 'public' || isAdmin() || isShopStaff(existing().shopId));
+      allow list: if existing().visibility == 'public' || isAdmin();
+
+      allow create: if isValidId(couponId) &&
+                       (isAdmin() || isShopStaff(incoming().shopId)) &&
+                       incoming().createdBy == request.auth.uid &&
+                       incoming().redeemedCount == 0 &&
+                       isValidCoupon(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isValidId(couponId) &&
+                       (isAdmin() || isShopStaff(existing().shopId)) &&
+                       isValidCoupon(incoming()) &&
+                       incoming().createdBy == existing().createdBy &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow delete: if isValidId(couponId) && (isAdmin() || isShopStaff(existing().shopId));
+    }
+
+    match /coupon_redemptions/{redemptionId} {
+      allow get, list: if isSignedIn() &&
+                          (existing().userId == request.auth.uid || isAdmin() || isShopStaff(existing().shopId));
+
+      allow create: if isSignedIn() &&
+                       redemptionId == (incoming().couponId + '_' + request.auth.uid) &&
+                       incoming().userId == request.auth.uid &&
+                       isValidId(incoming().couponId) &&
+                       incoming().shopId is string && incoming().shopId.size() >= 1 &&
+                       incoming().code is string && incoming().code.size() >= 3 &&
+                       incoming().status == 'SAVED' &&
+                       incoming().discountLabel is string && incoming().discountLabel.size() <= 40 &&
+                       incoming().savedAt is timestamp &&
+                       incoming().savedAt <= request.time;
+
+      allow update: if (isAdmin() || isShopStaff(existing().shopId)) &&
+                       incoming().userId == existing().userId &&
+                       incoming().couponId == existing().couponId &&
+                       incoming().status in ['SAVED', 'REDEEMED'];
+
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // --- FEATURE 6: CUSTOMER PHOTO REVIEWS ---
+    match /reviews/{reviewId} {
+      allow get: if isValidId(reviewId) &&
+                    (existing().visibility == 'public' || isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
+      allow list: if existing().visibility == 'public' || isAdmin();
+
+      allow create: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().helpfulCount == 0 &&
+                       incoming().reportCount == 0 &&
+                       incoming().visibility == 'public' &&
+                       isValidPhotoReview(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       isValidPhotoReview(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().shopId == existing().shopId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           incoming().visibility == existing().visibility &&
+                           incoming().helpfulCount == existing().helpfulCount &&
+                           incoming().reportCount == existing().reportCount &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'authorName', 'rating', 'comment', 'photoUrls', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /review_votes/{voteId} {
+      allow get, list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+                       voteId == (incoming().reviewId + '_' + request.auth.uid) &&
+                       incoming().userId == request.auth.uid &&
+                       isValidId(incoming().reviewId) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time;
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /review_reports/{reportId} {
+      allow get, list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+                       reportId == (incoming().reviewId + '_' + request.auth.uid) &&
+                       incoming().userId == request.auth.uid &&
+                       isValidId(incoming().reviewId) &&
+                       incoming().reason is string && incoming().reason.size() >= 3 && incoming().reason.size() <= 200 &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time;
+      allow delete: if isAdmin();
+    }
+
+    // --- FEATURE 7: TABLE RESERVATION ---
+    match /reservations/{reservationId} {
+      allow get, list: if isSignedIn() &&
+                          (existing().userId == request.auth.uid || isShopStaff(existing().shopId) || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(reservationId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'Pending' &&
+                       incoming().staffNote == '' &&
+                       isValidReservation(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isSignedIn() &&
+                       isValidId(reservationId) &&
+                       isValidReservation(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().shopId == existing().shopId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       (
+                         isAdmin() ||
+                         isShopStaff(existing().shopId) ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           existing().status in ['Pending', 'Confirmed'] &&
+                           incoming().status == 'Cancelled' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isAdmin();
+    }
+
+    // --- FEATURE 8: NOTIFICATIONS & PREFERENCES ---
+    match /notifications/{notificationId} {
+      allow get, list: if isSignedIn() &&
+                          (existing().userId == request.auth.uid || existing().userId == 'broadcast' || isAdmin());
+      allow create, delete: if isAdmin();
+      allow update: if isSignedIn() &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['read']) &&
+                           incoming().read is bool
+                         )
+                       );
+    }
+
+    match /user_preferences/{uid} {
+      allow get, list: if isSignedIn() && (uid == request.auth.uid || isAdmin());
+      allow create, update: if isSignedIn() &&
+                               uid == request.auth.uid &&
+                               incoming().userId == request.auth.uid &&
+                               incoming().fcmToken is string &&
+                               incoming().optInNewOpenings is bool &&
+                               incoming().optInOffers is bool &&
+                               incoming().optInSavedShops is bool &&
+                               incoming().optInReservations is bool &&
+                               incoming().optInEvents is bool &&
+                               incoming().optInAnnouncements is bool &&
+                               incoming().compareShopIds is list && incoming().compareShopIds.size() <= 3 &&
+                               incoming().updatedAt is timestamp &&
+                               incoming().updatedAt <= request.time;
+      allow delete: if isSignedIn() && (uid == request.auth.uid || isAdmin());
+    }
+
+    // --- FEATURE 10: BUSINESS VERIFICATION REQUESTS ---
+    match /verification_requests/{requestId} {
+      allow get, list: if isSignedIn() && (existing().requesterUid == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       incoming().requesterUid == request.auth.uid &&
+                       isValidId(incoming().shopId) &&
+                       incoming().shopName is string && incoming().shopName.size() >= 2 && incoming().shopName.size() <= 80 &&
+                       incoming().businessOwnerName is string && incoming().businessOwnerName.size() >= 2 && incoming().businessOwnerName.size() <= 80 &&
+                       incoming().businessPhone is string && incoming().businessPhone.size() >= 6 && incoming().businessPhone.size() <= 24 &&
+                       incoming().registrationNote is string && incoming().registrationNote.size() >= 5 && incoming().registrationNote.size() <= 500 &&
+                       incoming().status == 'Pending' &&
+                       incoming().reviewedBy == '' &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update, delete: if isAdmin();
+    }
+
+    // --- FEATURE 11: COFFEE EVENTS ---
+    match /events/{eventId} {
+      allow get: if isValidId(eventId) &&
+                    (existing().visibility == 'public' || isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+      allow list: if existing().visibility == 'public' || isAdmin();
+
+      allow create: if isValidId(eventId) &&
+                       (isAdmin() || (('shopId' in incoming()) && isShopStaff(incoming().shopId))) &&
+                       incoming().createdBy == request.auth.uid &&
+                       isValidEvent(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isValidId(eventId) &&
+                       (isAdmin() || (('shopId' in existing()) && isShopStaff(existing().shopId))) &&
+                       isValidEvent(incoming()) &&
+                       incoming().createdBy == existing().createdBy &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow delete: if isValidId(eventId) && (isAdmin() || (('shopId' in existing()) && isShopStaff(existing().shopId)));
+    }
+
+    match /event_registrations/{regId} {
+      allow get, list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       regId == (incoming().eventId + '_' + request.auth.uid) &&
+                       incoming().userId == request.auth.uid &&
+                       isValidId(incoming().eventId) &&
+                       incoming().attendeeName is string && incoming().attendeeName.size() >= 2 && incoming().attendeeName.size() <= 80 &&
+                       incoming().note is string && incoming().note.size() <= 250 &&
+                       incoming().status in ['Saved', 'Requested'] &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isSignedIn() &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           incoming().userId == existing().userId &&
+                           incoming().eventId == existing().eventId &&
+                           incoming().createdAt == existing().createdAt &&
+                           incoming().status in ['Saved', 'Requested', 'Cancelled'] &&
+                           incoming().updatedAt is timestamp &&
+                           incoming().updatedAt <= request.time
+                         )
+                       );
+
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // --- FEATURE 12: HELP & SUPPORT ---
+    match /support_tickets/{ticketId} {
+      allow get, list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(ticketId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'Open' &&
+                       incoming().adminResponse == '' &&
+                       isValidSupportTicket(incoming()) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isSignedIn() &&
+                       isValidId(ticketId) &&
+                       isValidSupportTicket(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           existing().status == 'Open' &&
+                           incoming().status == existing().status &&
+                           incoming().adminResponse == existing().adminResponse &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['description', 'contactInfo', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isAdmin();
     }
   }
 }

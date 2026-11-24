@@ -209,7 +209,7 @@ class FirestoreCommunityDataSource(
                     .firstOrNull()
                 if (firestoreError == null && error is CancellationException) throw error
                 val exceptionToLog = firestoreError ?: (error as? Exception)
-                if (exceptionToLog != null && auth?.currentUser?.uid == uid) {
+                if (exceptionToLog != null && auth.currentUser?.uid == uid) {
                     handleFirestoreError(exceptionToLog, OperationType.LIST, path)
                 }
                 throw error
@@ -239,7 +239,7 @@ class FirestoreCommunityDataSource(
                     .firstOrNull()
                 if (firestoreError == null && error is CancellationException) throw error
                 val exceptionToLog = firestoreError ?: (error as? Exception)
-                if (exceptionToLog != null && auth?.currentUser?.uid == uid) {
+                if (exceptionToLog != null && auth.currentUser?.uid == uid) {
                     handleFirestoreError(exceptionToLog, OperationType.LIST, path)
                 }
                 throw error

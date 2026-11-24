@@ -1,0 +1,16 @@
+{
+  "name": "nightcoffee-bd-functions",
+  "version": "1.0.0",
+  "description": "Trusted Firebase Cloud Functions for NightCoffee BD",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test functions.test.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  }
+}

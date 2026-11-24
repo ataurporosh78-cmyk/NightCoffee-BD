@@ -101,7 +101,8 @@ fun AddShopSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = DeepRoastSurface,
-        contentColor = WarmCream
+        contentColor = WarmCream,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
             modifier = Modifier

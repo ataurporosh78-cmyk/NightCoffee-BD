@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/nightcoffee_icon_fg"
+        android:drawable="@drawable/nightcoffee_liquid_fg"
         android:gravity="center" />
 </layer-list>

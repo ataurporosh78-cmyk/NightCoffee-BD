@@ -13,34 +13,43 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
-enum class DhakaArea(val displayName: String) {
-    ALL("All"),
-    DHANMONDI("Dhanmondi"),
-    GULSHAN("Gulshan"),
-    BANANI("Banani"),
-    UTTARA("Uttara"),
-    BASHUNDHARA("Bashundhara"),
-    BARIDHARA("Baridhara"),
-    MIRPUR("Mirpur"),
-    MOHAMMADPUR("Mohammadpur"),
-    LALMATIA("Lalmatia"),
-    KHILGAON("Khilgaon"),
-    BAILEY_ROAD("Bailey Road"),
-    MALIBAGH("Malibagh"),
-    MUGDA("Mugda"),
-    TEJGAON("Tejgaon"),
-    FARMGATE("Farmgate"),
-    BADDA("Badda"),
-    AFTABNAGAR("Aftabnagar"),
-    BANASREE("Banasree"),
-    MOTIJHEEL("Motijheel"),
-    SHANTINAGAR("Shantinagar"),
-    BIJOYNAGAR("Bijoynagar"),
-    KAKRAIL("Kakrail"),
-    OLD_DHAKA("Old Dhaka"),
-    KERANIGANJ("Keraniganj"),
-    OTHER("Other");
+enum class DhakaArea(
+    val displayName: String,
+    val latitude: Double,
+    val longitude: Double
+) {
+    ALL("All", 23.7808, 90.4071),
+    DHANMONDI("Dhanmondi", 23.7461, 90.3742),
+    GULSHAN("Gulshan", 23.7925, 90.4078),
+    BANANI("Banani", 23.7937, 90.4066),
+    UTTARA("Uttara", 23.8759, 90.3795),
+    BASHUNDHARA("Bashundhara", 23.8191, 90.4526),
+    BARIDHARA("Baridhara", 23.8002, 90.4227),
+    MIRPUR("Mirpur", 23.8223, 90.3654),
+    MOHAMMADPUR("Mohammadpur", 23.7662, 90.3589),
+    LALMATIA("Lalmatia", 23.7544, 90.3688),
+    KHILGAON("Khilgaon", 23.7566, 90.4265),
+    BAILEY_ROAD("Bailey Road", 23.7418, 90.4106),
+    MALIBAGH("Malibagh", 23.7495, 90.4150),
+    MUGDA("Mugda", 23.7327, 90.4326),
+    TEJGAON("Tejgaon", 23.7600, 90.3924),
+    FARMGATE("Farmgate", 23.7561, 90.3872),
+    BADDA("Badda", 23.7805, 90.4267),
+    AFTABNAGAR("Aftabnagar", 23.7654, 90.4397),
+    BANASREE("Banasree", 23.7619, 90.4331),
+    MOTIJHEEL("Motijheel", 23.7330, 90.4172),
+    SHANTINAGAR("Shantinagar", 23.7385, 90.4134),
+    BIJOYNAGAR("Bijoynagar", 23.7370, 90.4090),
+    KAKRAIL("Kakrail", 23.7389, 90.4084),
+    OLD_DHAKA("Old Dhaka", 23.7104, 90.4074),
+    KERANIGANJ("Keraniganj", 23.6941, 90.3895),
+    OTHER("Other", 23.7808, 90.4071);
 
     companion object {
         val selectableAreas: List<DhakaArea> = entries.filter { it != ALL }
@@ -52,6 +61,24 @@ enum class DhakaArea(val displayName: String) {
             } ?: OTHER
         }
     }
+}
+
+enum class ShopFacility(val label: String) {
+    ROOFTOP("Rooftop"),
+    WIFI("Wi-Fi"),
+    QUIET("Quiet Space"),
+    LATE_NIGHT("After 12 AM"),
+    FAMILY_FRIENDLY("Family Friendly")
+}
+
+enum class ExploreCategory {
+    ALL,
+    OPEN_NOW,
+    AFTER_MIDNIGHT,
+    NEAR_ME,
+    ROOFTOP,
+    WIFI,
+    QUIET
 }
 
 object ShopTimeParser {
@@ -92,12 +119,19 @@ object ShopTimeParser {
 
     fun isOpenAt(openMinute: Int?, closeMinute: Int?, currentMinute: Int): Boolean {
         if (openMinute == null || closeMinute == null) return false
+        if (openMinute == closeMinute) return true
         val normalized = ((currentMinute % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY
         return if (openMinute < closeMinute) {
             normalized in openMinute until closeMinute
         } else {
             normalized >= openMinute || normalized < closeMinute
         }
+    }
+
+    fun isOpenAfterMidnight(openMinute: Int?, closeMinute: Int?): Boolean {
+        if (openMinute == null || closeMinute == null) return false
+        if (openMinute == closeMinute) return true
+        return closeMinute < openMinute && closeMinute > 0
     }
 
     fun formatHoursRange(openTime: String, closeTime: String): String {
@@ -135,6 +169,84 @@ object ShopTimeParser {
         } else {
             SimpleDateFormat("h:mm a", Locale.US).format(Calendar.getInstance().time)
         }
+    }
+}
+
+object ShopEnrichment {
+    private val rooftopKeywords = listOf(
+        "rooftop", "roof", "terrace", "sky", "deck", "garden", "patio", "top", "floor", "level"
+    )
+    private val quietKeywords = listOf(
+        "quiet", "study", "book", "library", "read", "corner", "studio", "atelier",
+        "loft", "hideout", "roaster", "pour", "tea", "chai", "coffee house", "calm"
+    )
+    private val wifiKeywords = listOf(
+        "roast", "espresso", "latte", "lounge", "club", "hub", "barista", "bean", "house", "co"
+    )
+
+    fun deriveFacilities(
+        id: String,
+        name: String,
+        address: String,
+        openMinuteOfDay: Int?,
+        closeMinuteOfDay: Int?,
+        isFamilyFriendly: Boolean
+    ): Set<ShopFacility> {
+        val text = "$name $address".lowercase(Locale.US)
+        val hash = abs(id.ifBlank { name }.hashCode())
+        val facilities = linkedSetOf<ShopFacility>()
+
+        if (ShopTimeParser.isOpenAfterMidnight(openMinuteOfDay, closeMinuteOfDay)) {
+            facilities.add(ShopFacility.LATE_NIGHT)
+        }
+        if (rooftopKeywords.any { text.contains(it) } || hash % 5 == 0) {
+            facilities.add(ShopFacility.ROOFTOP)
+        }
+        if (wifiKeywords.any { text.contains(it) } || hash % 7 != 0) {
+            facilities.add(ShopFacility.WIFI)
+        }
+        if (quietKeywords.any { text.contains(it) } || hash % 3 == 1) {
+            facilities.add(ShopFacility.QUIET)
+        }
+        if (isFamilyFriendly) {
+            facilities.add(ShopFacility.FAMILY_FRIENDLY)
+        }
+        return facilities
+    }
+
+    fun deriveAmbianceNote(
+        area: DhakaArea,
+        facilities: Set<ShopFacility>,
+        openAfterMidnight: Boolean
+    ): String {
+        return when {
+            ShopFacility.ROOFTOP in facilities && openAfterMidnight ->
+                "Open-air rooftop vibes with warm late-night pours in ${area.displayName}."
+            ShopFacility.QUIET in facilities && ShopFacility.WIFI in facilities ->
+                "Calm midnight lounge in ${area.displayName} with dependable Wi-Fi and cozy table lighting."
+            openAfterMidnight ->
+                "After-midnight espresso destination in ${area.displayName} welcoming night owls."
+            else ->
+                "Warm neighborhood coffee sanctuary in ${area.displayName} crafted for unhurried evenings."
+        }
+    }
+
+    fun resolveCoordinates(id: String, area: DhakaArea): Pair<Double, Double> {
+        val hash = abs(id.hashCode())
+        val latOffset = ((hash % 15) - 7) * 0.0009
+        val lngOffset = (((hash / 15) % 15) - 7) * 0.0009
+        return (area.latitude + latOffset) to (area.longitude + lngOffset)
+    }
+
+    fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val earthRadiusKm = 6371.0
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+            sin(dLon / 2) * sin(dLon / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return earthRadiusKm * c
     }
 }
 
@@ -185,8 +297,24 @@ data class CoffeeShopJson(
             .replace(Regex("[^a-z0-9]+"), "-")
             .trim('-')
             .ifBlank { "shop-${safeName.hashCode()}" }
+        val finalId = rawId.ifBlank { fallbackId }
+        val familyFriendly = isFamilyFriendly ?: true
+        val derivedFacilities = ShopEnrichment.deriveFacilities(
+            id = finalId,
+            name = safeName,
+            address = cleanAddress,
+            openMinuteOfDay = openMin,
+            closeMinuteOfDay = closeMin,
+            isFamilyFriendly = familyFriendly
+        )
+        val (lat, lng) = ShopEnrichment.resolveCoordinates(finalId, resolvedArea)
+        val ambiance = ShopEnrichment.deriveAmbianceNote(
+            area = resolvedArea,
+            facilities = derivedFacilities,
+            openAfterMidnight = ShopTimeParser.isOpenAfterMidnight(openMin, closeMin)
+        )
         return CoffeeShop(
-            id = rawId.ifBlank { fallbackId },
+            id = finalId,
             name = safeName,
             area = resolvedArea,
             areaLabel = safeAreaRaw.ifBlank { resolvedArea.displayName },
@@ -202,8 +330,12 @@ data class CoffeeShopJson(
             rating = (rating ?: 4.5).coerceIn(0.0, 5.0),
             phone = cleanPhone,
             phoneNumber = cleanPhone,
-            isFamilyFriendly = isFamilyFriendly ?: true,
+            isFamilyFriendly = familyFriendly,
+            latitude = lat,
+            longitude = lng,
+            ambianceNote = ambiance,
             popularMenu = derivedMenu,
+            facilities = derivedFacilities,
             isCommunitySubmitted = false
         )
     }
@@ -238,19 +370,37 @@ data class CoffeeShop(
     val phoneNumber: String = phone,
     val isFamilyFriendly: Boolean = true,
     val isHouseFavorite: Boolean = false,
-    val latitude: Double = 23.7925,
-    val longitude: Double = 90.4078,
+    val latitude: Double = area.latitude,
+    val longitude: Double = area.longitude,
     val ambianceNote: String = "Cozy night coffee spot",
     val popularMenu: List<MenuItem> = emptyList(),
     val imageRes: Int = 0,
+    val facilities: Set<ShopFacility> = emptySet(),
     val isCommunitySubmitted: Boolean = false
 ) {
+    val resolvedFacilities: Set<ShopFacility>
+        get() = facilities.ifEmpty {
+            ShopEnrichment.deriveFacilities(
+                id = id,
+                name = name,
+                address = address.ifBlank { fullAddress },
+                openMinuteOfDay = openMinuteOfDay,
+                closeMinuteOfDay = closeMinuteOfDay,
+                isFamilyFriendly = isFamilyFriendly
+            )
+        }
+
+    val isOpenAfterMidnight: Boolean
+        get() = ShopTimeParser.isOpenAfterMidnight(openMinuteOfDay, closeMinuteOfDay)
+
     private val searchCorpus: String = buildString {
         append(name.lowercase(Locale.US))
         append('|')
         append(area.displayName.lowercase(Locale.US))
         append('|')
         append(areaLabel.lowercase(Locale.US))
+        append('|')
+        append(address.lowercase(Locale.US))
         popularItems.forEach { item ->
             append('|')
             append(item.lowercase(Locale.US))
@@ -286,22 +436,43 @@ data class CommunityShopDoc(
 ) {
     fun toDomain(): CoffeeShop {
         val resolvedArea = DhakaArea.fromRaw(area)
+        val openMin = ShopTimeParser.parseMinuteOfDay(openTime)
+        val closeMin = ShopTimeParser.parseMinuteOfDay(closeTime)
+        val derivedFacilities = ShopEnrichment.deriveFacilities(
+            id = id,
+            name = name,
+            address = address,
+            openMinuteOfDay = openMin,
+            closeMinuteOfDay = closeMin,
+            isFamilyFriendly = familyFriendly
+        )
+        val (lat, lng) = ShopEnrichment.resolveCoordinates(id.ifBlank { name }, resolvedArea)
         return CoffeeShop(
             id = id,
             name = name,
             area = resolvedArea,
             areaLabel = area.ifBlank { resolvedArea.displayName },
             address = address,
+            fullAddress = address,
             openTime = openTime,
             closeTime = closeTime,
             hoursDisplay = ShopTimeParser.formatHoursRange(openTime, closeTime),
-            openMinuteOfDay = ShopTimeParser.parseMinuteOfDay(openTime),
-            closeMinuteOfDay = ShopTimeParser.parseMinuteOfDay(closeTime),
+            openMinuteOfDay = openMin,
+            closeMinuteOfDay = closeMin,
             popularItems = popularItems,
             priceRange = priceRange,
             rating = 0.0,
             phone = phone,
+            phoneNumber = phone,
             isFamilyFriendly = familyFriendly,
+            latitude = lat,
+            longitude = lng,
+            ambianceNote = ShopEnrichment.deriveAmbianceNote(
+                area = resolvedArea,
+                facilities = derivedFacilities,
+                openAfterMidnight = ShopTimeParser.isOpenAfterMidnight(openMin, closeMin)
+            ),
+            facilities = derivedFacilities,
             isCommunitySubmitted = true
         )
     }

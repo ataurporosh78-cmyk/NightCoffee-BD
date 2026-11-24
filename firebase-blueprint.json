@@ -5,139 +5,308 @@
       "description": "User-submitted coffee shop in Dhaka stored in Cloud Firestore",
       "type": "object",
       "properties": {
-        "ownerId": {
-          "type": "string",
-          "description": "Firebase Auth UID of the user who submitted this shop"
-        },
-        "visibility": {
-          "type": "string",
-          "enum": ["public"],
-          "description": "Public directory visibility flag"
-        },
-        "name": {
-          "type": "string",
-          "description": "Coffee shop display name"
-        },
-        "area": {
-          "type": "string",
-          "description": "Dhaka neighborhood area name"
-        },
-        "address": {
-          "type": "string",
-          "description": "Full street address"
-        },
-        "openTime": {
-          "type": "string",
-          "description": "Opening time in 12h or 24h format"
-        },
-        "closeTime": {
-          "type": "string",
-          "description": "Closing time in 12h or 24h format"
-        },
-        "popularItems": {
-          "type": "array",
-          "description": "List of popular coffee/menu item strings"
-        },
-        "priceRange": {
-          "type": "string",
-          "description": "Price range label in BDT"
-        },
-        "phone": {
-          "type": "string",
-          "description": "Shop contact phone number"
-        },
-        "familyFriendly": {
-          "type": "boolean",
-          "description": "Whether the coffee shop is family friendly"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server creation timestamp written via FieldValue.serverTimestamp()"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server update timestamp written via FieldValue.serverTimestamp()"
-        }
+        "ownerId": { "type": "string" },
+        "visibility": { "type": "string", "enum": ["public"] },
+        "name": { "type": "string" },
+        "area": { "type": "string" },
+        "address": { "type": "string" },
+        "openTime": { "type": "string" },
+        "closeTime": { "type": "string" },
+        "popularItems": { "type": "array" },
+        "priceRange": { "type": "string" },
+        "phone": { "type": "string" },
+        "familyFriendly": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "ownerId",
-        "visibility",
-        "name",
-        "area",
-        "address",
-        "openTime",
-        "closeTime",
-        "popularItems",
-        "priceRange",
-        "phone",
-        "familyFriendly",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["ownerId", "visibility", "name", "area", "address", "openTime", "closeTime", "popularItems", "priceRange", "phone", "familyFriendly", "createdAt", "updatedAt"]
     },
-    "ShopReview": {
-      "title": "ShopReview",
-      "description": "User review and 1-5 star rating for any coffee shop",
+    "ShopOverlay": {
+      "title": "ShopOverlay",
+      "description": "Verified status, staff assignment, and live status override for Dhaka coffee shops",
       "type": "object",
       "properties": {
-        "shopId": {
-          "type": "string",
-          "description": "Target coffee shop identifier"
-        },
-        "userId": {
-          "type": "string",
-          "description": "Firebase Auth UID of the review author"
-        },
-        "authorName": {
-          "type": "string",
-          "description": "Display name of the review author"
-        },
-        "rating": {
-          "type": "integer",
-          "description": "1 to 5 star rating"
-        },
-        "comment": {
-          "type": "string",
-          "description": "Review text comment"
-        },
-        "visibility": {
-          "type": "string",
-          "enum": ["public"],
-          "description": "Public review visibility flag"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server creation timestamp written via FieldValue.serverTimestamp()"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server update timestamp written via FieldValue.serverTimestamp()"
-        }
-      },
-      "required": [
-        "shopId",
-        "userId",
-        "authorName",
-        "rating",
-        "comment",
-        "visibility",
-        "createdAt",
-        "updatedAt"
-      ]
+        "name": { "type": "string" },
+        "area": { "type": "string" },
+        "address": { "type": "string" },
+        "openTime": { "type": "string" },
+        "closeTime": { "type": "string" },
+        "priceRange": { "type": "string" },
+        "phone": { "type": "string" },
+        "familyFriendly": { "type": "boolean" },
+        "acAvailable": { "type": "boolean" },
+        "wifiAvailable": { "type": "boolean" },
+        "rooftopAvailable": { "type": "boolean" },
+        "verified": { "type": "boolean" },
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "verifiedBy": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "liveStatus": { "type": "string", "enum": ["OPEN_NOW", "CLOSED", "TEMPORARILY_CLOSED", "CLOSING_SOON"] },
+        "liveStatusUpdatedAt": { "type": "string", "format": "date-time" },
+        "liveStatusUpdatedBy": { "type": "string" },
+        "officialOverride": { "type": "boolean" },
+        "visibility": { "type": "string", "enum": ["public", "hidden"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ShopStatusReport": {
+      "title": "ShopStatusReport",
+      "description": "Customer or staff live opening status and incorrect-hours report",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "userId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "reportedStatus": { "type": "string", "enum": ["OPEN_NOW", "CLOSED", "TEMPORARILY_CLOSED", "CLOSING_SOON", "INCORRECT_HOURS"] },
+        "note": { "type": "string" },
+        "staffReport": { "type": "boolean" },
+        "verificationState": { "type": "string", "enum": ["UNVERIFIED", "VERIFIED", "DISMISSED"] },
+        "visibility": { "type": "string", "enum": ["public"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "MenuMetadata": {
+      "title": "MenuMetadata",
+      "description": "Digital menu availability metadata for a shop",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "currency": { "type": "string", "enum": ["BDT"] },
+        "available": { "type": "boolean" },
+        "visibility": { "type": "string", "enum": ["public", "hidden"] },
+        "updatedBy": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "MenuItemDoc": {
+      "title": "MenuItemDoc",
+      "description": "Published digital menu item with BDT pricing",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "category": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "priceBdt": { "type": "integer" },
+        "available": { "type": "boolean" },
+        "special": { "type": "boolean" },
+        "visibility": { "type": "string", "enum": ["public", "hidden"] },
+        "updatedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CrowdReport": {
+      "title": "CrowdReport",
+      "description": "Timestamped customer crowd-level report with expiration",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "userId": { "type": "string" },
+        "level": { "type": "string", "enum": ["QUIET", "MODERATE", "BUSY", "VERY_BUSY"] },
+        "note": { "type": "string" },
+        "flaggedIncorrectCount": { "type": "integer" },
+        "verificationState": { "type": "string", "enum": ["ACTIVE", "FLAGGED", "DISMISSED"] },
+        "visibility": { "type": "string", "enum": ["public"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Discount offer or coupon code for Dhaka coffee shops",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "shopName": { "type": "string" },
+        "code": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "discountType": { "type": "string", "enum": ["PERCENTAGE", "FIXED_BDT"] },
+        "discountValue": { "type": "integer" },
+        "minSpendBdt": { "type": "integer" },
+        "maxUsageLimit": { "type": "integer" },
+        "redeemedCount": { "type": "integer" },
+        "terms": { "type": "string" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "active": { "type": "boolean" },
+        "visibility": { "type": "string", "enum": ["public", "hidden"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CouponRedemption": {
+      "title": "CouponRedemption",
+      "description": "Per-user coupon save/redemption record keyed by {couponId}_{uid}",
+      "type": "object",
+      "properties": {
+        "couponId": { "type": "string" },
+        "userId": { "type": "string" },
+        "shopId": { "type": "string" },
+        "code": { "type": "string" },
+        "status": { "type": "string", "enum": ["SAVED", "REDEEMED"] },
+        "discountLabel": { "type": "string" },
+        "savedAt": { "type": "string", "format": "date-time" },
+        "redeemedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PhotoReview": {
+      "title": "PhotoReview",
+      "description": "Customer review with optional Storage photo URLs, helpful votes, and moderation flags",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "userId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "photoUrls": { "type": "array" },
+        "helpfulCount": { "type": "integer" },
+        "reportCount": { "type": "integer" },
+        "visibility": { "type": "string", "enum": ["public", "hidden", "flagged"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "Table reservation request in Bangladesh local time",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "shopName": { "type": "string" },
+        "userId": { "type": "string" },
+        "guestName": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "dateDhaka": { "type": "string" },
+        "timeSlot": { "type": "string" },
+        "guestCount": { "type": "integer" },
+        "specialRequest": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Confirmed", "Rejected", "Cancelled", "Completed"] },
+        "staffNote": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "User or broadcast push/in-app notification",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "targetRoute": { "type": "string" },
+        "targetId": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CoffeeEvent": {
+      "title": "CoffeeEvent",
+      "description": "Dhaka coffee community event, workshop, tasting, or live music night",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "shopId": { "type": "string" },
+        "venueName": { "type": "string" },
+        "area": { "type": "string" },
+        "eventDateDhaka": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "organizer": { "type": "string" },
+        "registrationInfo": { "type": "string" },
+        "status": { "type": "string", "enum": ["Upcoming", "Ongoing", "Completed", "Cancelled"] },
+        "visibility": { "type": "string", "enum": ["public", "hidden"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Private customer report or support request",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetName": { "type": "string" },
+        "subject": { "type": "string" },
+        "description": { "type": "string" },
+        "contactInfo": { "type": "string" },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Resolved", "Closed"] },
+        "adminResponse": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "VerificationRequest": {
+      "title": "VerificationRequest",
+      "description": "Business verification request reviewed exclusively by admins",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "shopName": { "type": "string" },
+        "requesterUid": { "type": "string" },
+        "businessOwnerName": { "type": "string" },
+        "businessPhone": { "type": "string" },
+        "registrationNote": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected"] },
+        "reviewedBy": { "type": "string" },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "UserPreference": {
+      "title": "UserPreference",
+      "description": "Notification opt-in categories, FCM token, and compare list",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "fcmToken": { "type": "string" },
+        "optInNewOpenings": { "type": "boolean" },
+        "optInOffers": { "type": "boolean" },
+        "optInSavedShops": { "type": "boolean" },
+        "optInReservations": { "type": "boolean" },
+        "optInEvents": { "type": "boolean" },
+        "optInAnnouncements": { "type": "boolean" },
+        "compareShopIds": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
-    "/community_shops/{shopId}": {
-      "schema": { "$ref": "#/entities/CommunityShop" },
-      "description": "Shared community-contributed coffee shops in Dhaka"
-    },
-    "/shop_reviews/{reviewId}": {
-      "schema": { "$ref": "#/entities/ShopReview" },
-      "description": "Shared community coffee shop reviews and 1-5 star ratings"
-    }
+    "/admins/{uid}": { "description": "Server-assigned administrator role documents" },
+    "/shop_staff/{staffId}": { "description": "Server-assigned shop owner/staff role documents ({shopId}_{uid})" },
+    "/community_shops/{shopId}": { "schema": { "$ref": "#/entities/CommunityShop" }, "description": "Community-submitted coffee shops" },
+    "/shop_reviews/{reviewId}": { "description": "Legacy coffee shop reviews" },
+    "/shops/{shopId}": { "schema": { "$ref": "#/entities/ShopOverlay" }, "description": "Verified badge, owner/staff, and live status metadata" },
+    "/shop_status_reports/{reportId}": { "schema": { "$ref": "#/entities/ShopStatusReport" }, "description": "Live status and incorrect-hours reports" },
+    "/menus/{shopId}": { "schema": { "$ref": "#/entities/MenuMetadata" }, "description": "Digital menu metadata per shop" },
+    "/menu_items/{itemId}": { "schema": { "$ref": "#/entities/MenuItemDoc" }, "description": "Digital menu items with BDT pricing" },
+    "/crowd_reports/{reportId}": { "schema": { "$ref": "#/entities/CrowdReport" }, "description": "Customer crowd reports with automatic expiration" },
+    "/crowd_flags/{flagId}": { "description": "Per-user duplicate-guarded incorrect crowd report flags" },
+    "/coupons/{couponId}": { "schema": { "$ref": "#/entities/Coupon" }, "description": "Exclusive offers and coupon codes" },
+    "/coupon_redemptions/{redemptionId}": { "schema": { "$ref": "#/entities/CouponRedemption" }, "description": "Coupon saves and server-verified redemptions" },
+    "/reviews/{reviewId}": { "schema": { "$ref": "#/entities/PhotoReview" }, "description": "Photo-enabled customer reviews" },
+    "/review_votes/{voteId}": { "description": "Per-user helpful review vote guard" },
+    "/review_reports/{reportId}": { "description": "Per-user review moderation flag guard" },
+    "/reservations/{reservationId}": { "schema": { "$ref": "#/entities/Reservation" }, "description": "Private table reservation requests" },
+    "/notifications/{notificationId}": { "schema": { "$ref": "#/entities/NotificationItem" }, "description": "In-app notification history and broadcasts" },
+    "/events/{eventId}": { "schema": { "$ref": "#/entities/CoffeeEvent" }, "description": "Dhaka coffee events" },
+    "/event_registrations/{regId}": { "description": "User saved events and registration requests" },
+    "/support_tickets/{ticketId}": { "schema": { "$ref": "#/entities/SupportTicket" }, "description": "Private support and data-correction tickets" },
+    "/verification_requests/{requestId}": { "schema": { "$ref": "#/entities/VerificationRequest" }, "description": "Shop business verification requests" },
+    "/user_preferences/{uid}": { "schema": { "$ref": "#/entities/UserPreference" }, "description": "FCM token, notification consent toggles, and compare list" }
   }
 }
