@@ -7,7 +7,7 @@ import androidx.compose.runtime.Immutable
 @Keep
 data class MenuItem(
     val name: String = "",
-    val priceBdt: Int = 0,
     val description: String = "",
+    val priceBdt: Int = 0,
     val isHouseFavorite: Boolean = false
 )
