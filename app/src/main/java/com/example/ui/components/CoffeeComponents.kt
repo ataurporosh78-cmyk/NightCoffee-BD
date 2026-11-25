@@ -3,12 +3,16 @@
 package com.example.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -32,17 +36,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlinx.coroutines.launch
 import com.example.R
 import com.example.ui.theme.CaramelContainer
 import com.example.ui.theme.CaramelGold
@@ -82,13 +95,12 @@ fun OpenStatusBadge(
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(contentColor)
+            PulsingStatusDot(
+                color = contentColor,
+                isPulsing = isOpenNow,
+                dotSize = 7.dp
             )
             Text(
                 text = label,
@@ -198,48 +210,133 @@ fun FavoriteHeartButton(
     val description = stringResource(
         if (isFavorite) R.string.favorite_remove_desc else R.string.favorite_add_desc
     )
-    val scale by animateFloatAsState(
-        targetValue = if (isFavorite) 1.12f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "favoriteScale"
+    val density = LocalDensity.current
+    val sparkRadiusPx = remember(density) { with(density) { 26.dp.toPx() } }
+    val sparkDotRadiusPx = remember(density) { with(density) { 3.dp.toPx() } }
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else 1f,
+        animationSpec = if (isPressed) {
+            tween(durationMillis = 100)
+        } else {
+            spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMedium)
+        },
+        label = "favoritePressScale"
     )
+
+    var prevFavorite by remember { mutableStateOf(isFavorite) }
+    val popScale = remember { Animatable(1f) }
+    val sparkProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(isFavorite) {
+        if (isFavorite != prevFavorite) {
+            prevFavorite = isFavorite
+            if (isFavorite) {
+                launch {
+                    popScale.snapTo(0.55f)
+                    popScale.animateTo(
+                        targetValue = 1.14f,
+                        animationSpec = spring(
+                            dampingRatio = 0.38f,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    )
+                    popScale.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 160)
+                    )
+                }
+                launch {
+                    sparkProgress.snapTo(0.01f)
+                    sparkProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 480, easing = EaseOutMotion)
+                    )
+                    sparkProgress.snapTo(0f)
+                }
+            } else {
+                launch {
+                    popScale.snapTo(0.78f)
+                    popScale.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 250, easing = EaseOut)
+                    )
+                }
+            }
+        }
+    }
+
+    val heartColor = if (isFavorite) Color(0xFFFF4D6D) else WarmCream
     val bgColor by animateColorAsState(
         targetValue = if (isFavorite) FavoriteHeartContainer.copy(alpha = 0.90f) else EspressoBlack.copy(alpha = 0.70f),
         animationSpec = tween(200),
         label = "favoriteBg"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isFavorite) FavoriteHeart.copy(alpha = 0.65f) else CocoaBorder,
+        targetValue = if (isFavorite) Color(0xFFFF4D6D).copy(alpha = 0.65f) else CocoaBorder,
         animationSpec = tween(200),
         label = "favoriteBorder"
     )
 
-    Surface(
-        shape = CircleShape,
-        color = bgColor,
-        border = BorderStroke(width = 1.dp, color = borderColor),
-        shadowElevation = 0.dp,
-        tonalElevation = 0.dp,
-        modifier = modifier.size(48.dp)
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            },
+        contentAlignment = Alignment.Center
     ) {
-        IconButton(
-            onClick = onToggle,
+        Surface(
+            shape = CircleShape,
+            color = bgColor,
+            border = BorderStroke(width = 1.dp, color = borderColor),
+            shadowElevation = 0.dp,
+            tonalElevation = 0.dp,
             modifier = Modifier.size(48.dp)
         ) {
-            Icon(
-                imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                contentDescription = description,
-                tint = if (isFavorite) FavoriteHeart else WarmCream,
-                modifier = Modifier
-                    .size(20.dp)
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                    }
-            )
+            IconButton(
+                onClick = onToggle,
+                interactionSource = interactionSource,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                    contentDescription = description,
+                    tint = heartColor,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer {
+                            scaleX = popScale.value
+                            scaleY = popScale.value
+                        }
+                )
+            }
+        }
+
+        if (sparkProgress.value > 0f) {
+            Canvas(modifier = Modifier.size(48.dp)) {
+                val p = sparkProgress.value
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                val particleRadius = sparkDotRadiusPx * (1f - p).coerceIn(0f, 1f)
+                val particleAlpha = (1f - p).coerceIn(0f, 1f)
+                val distance = sparkRadiusPx * p
+
+                for (k in 0 until 8) {
+                    val angleRad = Math.toRadians(k * 45.0)
+                    val dx = (cos(angleRad) * distance).toFloat()
+                    val dy = (sin(angleRad) * distance).toFloat()
+                    val color = if (k % 2 == 1) Color(0xFFD9B26F) else Color(0xFFFF4D6D)
+                    drawCircle(
+                        color = color.copy(alpha = particleAlpha),
+                        radius = particleRadius,
+                        center = Offset(cx + dx, cy + dy)
+                    )
+                }
+            }
         }
     }
 }

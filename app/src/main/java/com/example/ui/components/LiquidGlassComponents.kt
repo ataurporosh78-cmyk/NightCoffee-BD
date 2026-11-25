@@ -331,11 +331,31 @@ fun LiquidGlassChip(
         label = "chipText"
     )
 
+    val chipInteraction = remember { MutableInteractionSource() }
+    val chipPressed by chipInteraction.collectIsPressedAsState()
+    val chipScale by animateFloatAsState(
+        targetValue = if (chipPressed) 0.93f else 1f,
+        animationSpec = if (chipPressed) {
+            tween(durationMillis = 100)
+        } else {
+            spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow)
+        },
+        label = "chipPressScale"
+    )
+
     Surface(
         modifier = modifier
             .height(44.dp)
+            .graphicsLayer {
+                scaleX = chipScale
+                scaleY = chipScale
+            }
             .clip(RoundedCornerShape(50))
-            .clickable(onClick = onClick),
+            .clickable(
+                interactionSource = chipInteraction,
+                indication = androidx.compose.material3.ripple(color = CaramelGold),
+                onClick = onClick
+            ),
         shape = RoundedCornerShape(50),
         color = containerColor,
         border = BorderStroke(1.dp, borderColor),
@@ -460,11 +480,15 @@ fun LiquidGlassShopCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.975f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = if (isPressed) {
+            tween(durationMillis = 120)
+        } else {
+            spring(
+                dampingRatio = 0.48f,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        },
         label = "cardPressScale"
     )
     val cardBorder by animateColorAsState(
@@ -706,11 +730,15 @@ fun FeaturedSpotlightCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = if (isPressed) {
+            tween(durationMillis = 120)
+        } else {
+            spring(
+                dampingRatio = 0.48f,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        },
         label = "featuredPressScale"
     )
     val imageRes = remember(shop.id, shop.imageRes) { ShopImageResolver.resolveDrawable(shop) }
@@ -831,12 +859,34 @@ fun OpenNowCompactCard(
 ) {
     val shop = item.shop
     val imageRes = remember(shop.id, shop.imageRes) { ShopImageResolver.resolveDrawable(shop) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = if (isPressed) {
+            tween(durationMillis = 120)
+        } else {
+            spring(
+                dampingRatio = 0.48f,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        },
+        label = "compactPressScale"
+    )
 
     LiquidGlassSurface(
         modifier = modifier
             .width(220.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(RoundedCornerShape(22.dp))
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = androidx.compose.material3.ripple(color = CaramelGold),
+                onClick = onClick
+            )
             .testTag("open_now_card_${shop.id}"),
         shape = RoundedCornerShape(22.dp)
     ) {
@@ -932,7 +982,7 @@ fun StartupSplashOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .alpha(alphaAnim)
+            .background(EspressoBlack)
             .background(
                 Brush.radialGradient(
                     colors = listOf(
@@ -945,10 +995,12 @@ fun StartupSplashOverlay(
         contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier.graphicsLayer {
-                scaleX = scaleAnim
-                scaleY = scaleAnim
-            },
+            modifier = Modifier
+                .alpha(alphaAnim)
+                .graphicsLayer {
+                    scaleX = scaleAnim
+                    scaleY = scaleAnim
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

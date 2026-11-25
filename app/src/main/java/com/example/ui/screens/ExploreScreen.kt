@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -95,6 +95,8 @@ import com.example.model.AggregatedCrowdStatus
 import com.example.model.LiveShopStatus
 import com.example.model.ResolvedShopStatus
 import com.example.model.ShopOverlayDoc
+import com.example.ui.components.ShimmerShopSkeletonList
+import com.example.ui.components.StaggeredEntranceItem
 import com.example.ui.components.isPositiveOpen
 
 @Composable
@@ -431,12 +433,10 @@ fun ExploreScreen(
 
             when {
                 uiState.isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = CaramelGold)
-                    }
+                    ShimmerShopSkeletonList(
+                        itemCount = 4,
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 116.dp)
+                    )
                 }
 
                 uiState.shops.isEmpty() -> {
@@ -511,26 +511,28 @@ fun ExploreScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        items(
+                        itemsIndexed(
                             items = uiState.shops,
-                            key = { it.shop.id },
-                            contentType = { "liquid_shop_card" }
-                        ) { item ->
+                            key = { _, item -> item.shop.id },
+                            contentType = { _, _ -> "liquid_shop_card" }
+                        ) { index, item ->
                             val status = resolveStatus(item)
                             val crowd = resolveCrowd(item.shop.id)
-                            LiquidGlassShopCard(
-                                item = item,
-                                onToggleFavorite = { onToggleFavorite(item.shop.id) },
-                                onClick = { onShopClick(item.shop.id) },
-                                isVerified = overlays[item.shop.id]?.verified == true,
-                                liveStatusLabel = status?.verifiedStatus?.label ?: status?.scheduledLabel,
-                                isLiveStatusPositive = status?.effectiveOpenNow ?: item.isOpenNow,
-                                isLiveStatusWarning = status?.verifiedStatus == LiveShopStatus.CLOSING_SOON ||
-                                    status?.scheduledLabel == "Closing Soon",
-                                crowdLevel = crowd?.takeIf { it.isSufficientlyRecent }?.level,
-                                isCompared = item.shop.id in comparedIds,
-                                onToggleCompare = { onToggleCompare(item.shop.id) }
-                            )
+                            StaggeredEntranceItem(index = index) {
+                                LiquidGlassShopCard(
+                                    item = item,
+                                    onToggleFavorite = { onToggleFavorite(item.shop.id) },
+                                    onClick = { onShopClick(item.shop.id) },
+                                    isVerified = overlays[item.shop.id]?.verified == true,
+                                    liveStatusLabel = status?.verifiedStatus?.label ?: status?.scheduledLabel,
+                                    isLiveStatusPositive = status?.effectiveOpenNow ?: item.isOpenNow,
+                                    isLiveStatusWarning = status?.verifiedStatus == LiveShopStatus.CLOSING_SOON ||
+                                        status?.scheduledLabel == "Closing Soon",
+                                    crowdLevel = crowd?.takeIf { it.isSufficientlyRecent }?.level,
+                                    isCompared = item.shop.id in comparedIds,
+                                    onToggleCompare = { onToggleCompare(item.shop.id) }
+                                )
+                            }
                         }
                         item(key = "explore_bottom_spacer") {
                             Spacer(modifier = Modifier.navigationBarsPadding())

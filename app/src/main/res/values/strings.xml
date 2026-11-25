@@ -2,8 +2,10 @@
     <string name="app_name">NightCoffee BD</string>
     <string name="home_subtitle">Late-night cafes across Dhaka</string>
     <string name="auth_welcome_title">Discover Dhaka After Dark</string>
-    <string name="auth_welcome_subtitle">Sign in with Google to browse 2,000+ late-night coffee spots, submit new cafes, and share community reviews.</string>
+    <string name="auth_welcome_subtitle">Sign in to explore 120 curated late-night coffee shops across Dhaka, save favorites, submit new cafes, and share reviews.</string>
     <string name="auth_sign_in_google">Sign in with Google</string>
+    <string name="auth_sign_in_email">Sign In</string>
+    <string name="auth_sign_up_email">Create Account</string>
     <string name="auth_sign_out_desc">Sign out</string>
     <string name="search_placeholder">Search shop, area, or coffee item…</string>
     <string name="search_clear_desc">Clear search</string>
@@ -63,14 +65,12 @@
     <string name="rating_out_of_five">%1$.1f / 5.0</string>
     <string name="action_call_shop">Call Shop</string>
     <string name="action_view_on_maps">View on Maps</string>
-    <string name="default_web_client_id" translatable="false">placeholder_web_client_id</string>
     <string name="details_menu_title">Popular Menu</string>
     <string name="details_menu_currency">৳%d</string>
     <string name="signature_highlight">Signature</string>
-    <string name="auth_continue_guest">Continue as Guest</string>
     <string name="auth_sign_in_desc">Sign in</string>
     <string name="auth_sign_in_to_review">Sign in to Post Review</string>
-    <string name="auth_unavailable_msg">Cloud sign-in is unavailable in this build. You can still browse all local Dhaka cafes as a guest.</string>
+    <string name="auth_unavailable_msg">Firebase Authentication is unavailable in this build. Please verify google-services.json configuration.</string>
     <string name="home_greeting_evening">Good Evening</string>
     <string name="home_greeting_subtitle">Find your perfect midnight coffee.</string>
     <string name="home_search_prompt">Search cafes, areas, or signature brews…</string>
@@ -93,9 +93,7 @@
     <string name="favorites_title">Saved Cafes</string>
     <string name="favorites_subtitle">Your bookmarked late-night hangouts</string>
     <string name="profile_title">Night Explorer</string>
-    <string name="profile_guest_name">Guest Explorer</string>
-    <string name="profile_guest_hint">Sign in with Google to publish new cafes and post community reviews.</string>
-    <string name="profile_signed_in_badge">Verified Google Member</string>
+    <string name="profile_signed_in_badge">Signed-In Member</string>
     <string name="profile_add_shop_title">Submit a Late-Night Cafe</string>
     <string name="profile_add_shop_subtitle">Share a hidden espresso bar or rooftop lounge in Dhaka.</string>
     <string name="profile_location_title">Nearby Distance</string>

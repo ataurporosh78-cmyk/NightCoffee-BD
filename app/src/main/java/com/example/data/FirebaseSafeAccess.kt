@@ -76,10 +76,21 @@ object FirebaseSafeAccess {
         }
     }
 
+    fun getGoogleWebClientId(context: Context): String? {
+        return runCatching {
+            val resId = context.resources.getIdentifier(
+                "default_web_client_id",
+                "string",
+                context.packageName
+            )
+            if (resId == 0) return@runCatching null
+            context.getString(resId).trim().takeIf {
+                it.isNotEmpty() && it != "placeholder_web_client_id"
+            }
+        }.getOrNull()
+    }
+
     fun hasValidGoogleWebClientId(context: Context): Boolean {
-        val clientId = runCatching {
-            context.getString(R.string.default_web_client_id).trim()
-        }.getOrDefault("")
-        return clientId.isNotEmpty() && clientId != "placeholder_web_client_id"
+        return getGoogleWebClientId(context) != null
     }
 }

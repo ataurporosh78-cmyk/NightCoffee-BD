@@ -166,36 +166,24 @@ fun ProfileScreen(
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = if (isSignedIn) {
-                                        displayName?.takeIf { it.isNotBlank() } ?: "Dhaka Coffee Lover"
-                                    } else {
-                                        stringResource(R.string.profile_guest_name)
-                                    },
+                                    text = displayName?.takeIf { it.isNotBlank() } ?: "Dhaka Coffee Lover",
                                     style = MaterialTheme.typography.titleLarge,
                                     color = WarmCream
                                 )
-                                if (isSignedIn) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.VerifiedUser,
-                                            contentDescription = null,
-                                            tint = OpenGreen,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.profile_signed_in_badge),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = OpenGreen
-                                        )
-                                    }
-                                } else {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.VerifiedUser,
+                                        contentDescription = null,
+                                        tint = OpenGreen,
+                                        modifier = Modifier.size(14.dp)
+                                    )
                                     Text(
-                                        text = stringResource(R.string.profile_guest_hint),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = ToastedLatte
+                                        text = stringResource(R.string.profile_signed_in_badge),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = OpenGreen
                                     )
                                 }
                             }
@@ -243,7 +231,7 @@ fun ProfileScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = stringResource(R.string.auth_sign_in_google),
+                                    text = stringResource(R.string.auth_sign_in_desc),
                                     fontWeight = FontWeight.Bold
                                 )
                             }

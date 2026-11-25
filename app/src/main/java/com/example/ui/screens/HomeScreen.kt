@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
@@ -88,7 +89,10 @@ import com.example.model.AggregatedCrowdStatus
 import com.example.model.ResolvedShopStatus
 import com.example.model.ShopOverlayDoc
 import com.example.ui.components.OfflineSyncBanner
+import com.example.ui.components.PulsingStatusDot
 import com.example.ui.components.QuickPlatformTile
+import com.example.ui.components.ShimmerShopSkeletonList
+import com.example.ui.components.StaggeredEntranceItem
 import com.example.ui.components.isPositiveOpen
 
 @Composable
@@ -133,22 +137,11 @@ fun HomeScreen(
         contentAlignment = Alignment.TopCenter
     ) {
         if (uiState.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    CircularProgressIndicator(color = CaramelGold)
-                    Text(
-                        text = stringResource(R.string.loading_catalog),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ToastedLatte
-                    )
-                }
-            }
+            ShimmerShopSkeletonList(
+                modifier = Modifier.statusBarsPadding(),
+                itemCount = 5,
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 116.dp)
+            )
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -292,27 +285,29 @@ fun HomeScreen(
                     )
                 }
 
-                items(
+                itemsIndexed(
                     items = uiState.popularShops,
-                    key = { "pop_${it.shop.id}" },
-                    contentType = { "liquid_shop_card" }
-                ) { item ->
+                    key = { _, item -> "pop_${item.shop.id}" },
+                    contentType = { _, _ -> "liquid_shop_card" }
+                ) { index, item ->
                     val status = resolveStatus(item)
                     val crowd = resolveCrowd(item.shop.id)
-                    LiquidGlassShopCard(
-                        item = item,
-                        onToggleFavorite = { onToggleFavorite(item.shop.id) },
-                        onClick = { onShopClick(item.shop.id) },
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        isVerified = overlays[item.shop.id]?.verified == true,
-                        liveStatusLabel = status?.verifiedStatus?.label ?: status?.scheduledLabel,
-                        isLiveStatusPositive = status?.effectiveOpenNow ?: item.isOpenNow,
-                        isLiveStatusWarning = status?.verifiedStatus == com.example.model.LiveShopStatus.CLOSING_SOON ||
-                            status?.scheduledLabel == "Closing Soon",
-                        crowdLevel = crowd?.takeIf { it.isSufficientlyRecent }?.level,
-                        isCompared = item.shop.id in comparedIds,
-                        onToggleCompare = { onToggleCompare(item.shop.id) }
-                    )
+                    StaggeredEntranceItem(index = index) {
+                        LiquidGlassShopCard(
+                            item = item,
+                            onToggleFavorite = { onToggleFavorite(item.shop.id) },
+                            onClick = { onShopClick(item.shop.id) },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            isVerified = overlays[item.shop.id]?.verified == true,
+                            liveStatusLabel = status?.verifiedStatus?.label ?: status?.scheduledLabel,
+                            isLiveStatusPositive = status?.effectiveOpenNow ?: item.isOpenNow,
+                            isLiveStatusWarning = status?.verifiedStatus == com.example.model.LiveShopStatus.CLOSING_SOON ||
+                                status?.scheduledLabel == "Closing Soon",
+                            crowdLevel = crowd?.takeIf { it.isSufficientlyRecent }?.level,
+                            isCompared = item.shop.id in comparedIds,
+                            onToggleCompare = { onToggleCompare(item.shop.id) }
+                        )
+                    }
                 }
 
                 item(key = "home_bottom_spacer") {
@@ -583,11 +578,10 @@ private fun HomeSectionHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (accentDot != null) {
-                Box(
-                    modifier = Modifier
-                        .size(9.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(accentDot)
+                PulsingStatusDot(
+                    color = accentDot,
+                    isPulsing = true,
+                    dotSize = 9.dp
                 )
             }
             Text(

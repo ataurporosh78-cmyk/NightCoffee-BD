@@ -110,7 +110,6 @@ private const val ROUTE_ADMIN_DASHBOARD = "admin_dashboard"
 
 private const val ARG_SHOP_ID = "shopId"
 private const val ARG_SHOP_NAME = "shopName"
-private const val GUEST_USER_ID = "guest"
 
 fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
     val listener = FirebaseAuth.AuthStateListener { auth ->
@@ -126,47 +125,53 @@ fun NightCoffeeNavigation(
     onConsumeDeepLink: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val auth = remember(context) { FirebaseSafeAccess.safeAuth(context) }
+    val auth = remember(context) {
+        if (FirebaseSafeAccess.ensureInitialized(context)) {
+            runCatching { FirebaseAuth.getInstance() }.getOrNull()
+        } else {
+            null
+        }
+    }
     val currentUser by remember(auth) {
         auth?.authStateFlow() ?: flowOf(null)
     }.collectAsStateWithLifecycle(initialValue = auth?.currentUser)
 
-    var showSignInOverlay by rememberSaveable { mutableStateOf(false) }
-    var showSplash by rememberSaveable { mutableStateOf(true) }
+    var showSplashForAuthenticatedUser by rememberSaveable { mutableStateOf(auth?.currentUser != null) }
+    var authRefreshTick by remember { mutableStateOf(0) }
 
     LaunchedEffect(currentUser) {
-        if (currentUser != null) {
-            showSignInOverlay = false
+        if (currentUser == null) {
+            showSplashForAuthenticatedUser = false
         }
     }
 
-    val activeUserId = currentUser?.uid ?: GUEST_USER_ID
-    val isSignedIn = currentUser != null
-
     Box(modifier = Modifier.fillMaxSize()) {
-        key(activeUserId) {
-            NightCoffeeAppContent(
-                currentUserId = activeUserId,
-                displayName = currentUser?.displayName,
-                isSignedIn = isSignedIn,
-                pendingDeepLink = pendingDeepLink,
-                onConsumeDeepLink = onConsumeDeepLink,
-                onRequireSignIn = { showSignInOverlay = true }
-            )
-        }
-
-        if (showSignInOverlay && !isSignedIn) {
-            BackHandler {
-                showSignInOverlay = false
-            }
+        val signedInUser = currentUser
+        if (signedInUser == null) {
             AuthScreen(
-                onAuthSuccess = { showSignInOverlay = false },
-                onContinueAsGuest = { showSignInOverlay = false }
+                onAuthSuccess = {
+                    authRefreshTick++
+                }
             )
-        }
-
-        if (showSplash) {
-            StartupSplashOverlay(onFinished = { showSplash = false })
+        } else {
+            val resolvedDisplayName = remember(signedInUser.uid, authRefreshTick, signedInUser.displayName, signedInUser.email) {
+                signedInUser.displayName
+                    ?.takeIf { it.isNotBlank() }
+                    ?: signedInUser.email?.substringBefore('@')?.takeIf { it.isNotBlank() }
+            }
+            key(signedInUser.uid) {
+                NightCoffeeAppContent(
+                    currentUserId = signedInUser.uid,
+                    displayName = resolvedDisplayName,
+                    isSignedIn = true,
+                    pendingDeepLink = pendingDeepLink,
+                    onConsumeDeepLink = onConsumeDeepLink,
+                    onRequireSignIn = { }
+                )
+            }
+            if (showSplashForAuthenticatedUser) {
+                StartupSplashOverlay(onFinished = { showSplashForAuthenticatedUser = false })
+            }
         }
     }
 }

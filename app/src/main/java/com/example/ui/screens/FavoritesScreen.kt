@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.ui.components.LiquidGlassShopCard
 import com.example.ui.components.LiquidGlassSurface
+import com.example.ui.components.StaggeredEntranceItem
 import com.example.ui.theme.CaramelGold
 import com.example.ui.theme.DarkEspressoInk
 import com.example.ui.theme.EspressoBlack
@@ -194,16 +195,18 @@ fun FavoritesScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(
+                    itemsIndexed(
                         items = uiState.favoriteShops,
-                        key = { "fav_${it.shop.id}" },
-                        contentType = { "liquid_shop_card" }
-                    ) { item ->
-                        LiquidGlassShopCard(
-                            item = item,
-                            onToggleFavorite = { onToggleFavorite(item.shop.id) },
-                            onClick = { onShopClick(item.shop.id) }
-                        )
+                        key = { _, item -> "fav_${item.shop.id}" },
+                        contentType = { _, _ -> "liquid_shop_card" }
+                    ) { index, item ->
+                        StaggeredEntranceItem(index = index) {
+                            LiquidGlassShopCard(
+                                item = item,
+                                onToggleFavorite = { onToggleFavorite(item.shop.id) },
+                                onClick = { onShopClick(item.shop.id) }
+                            )
+                        }
                     }
                     item(key = "favorites_bottom_spacer") {
                         Spacer(modifier = Modifier.navigationBarsPadding())

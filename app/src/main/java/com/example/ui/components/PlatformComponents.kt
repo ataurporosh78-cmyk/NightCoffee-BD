@@ -176,13 +176,12 @@ fun LiveStatusChipBadge(
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(fg)
+            PulsingStatusDot(
+                color = fg,
+                isPulsing = isPositive && !isWarning,
+                dotSize = 7.dp
             )
             Text(
                 text = label,
