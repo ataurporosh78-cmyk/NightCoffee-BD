@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import com.example.data.local.CachedCouponEntity
 import com.example.data.local.NightCoffeeDatabase
+import com.example.data.local.LocalReviewsStorage
 import com.example.model.CouponDiscountType
 import com.example.model.CouponDoc
 import com.example.model.CouponRedemptionDoc
@@ -38,10 +39,13 @@ class PlatformEngagementRepository(
     private val auth: FirebaseAuth? = FirebaseSafeAccess.safeAuth(context),
     private val storage: FirebaseStorage? = FirebaseSafeAccess.safeStorage(context),
     private val functions: FirebaseFunctions? = FirebaseSafeAccess.safeFunctions(context),
-    private val localDb: NightCoffeeDatabase = NightCoffeeDatabase.getInstance(context)
+    private val localDb: NightCoffeeDatabase = NightCoffeeDatabase.getInstance(context),
+    private val currentLocalUid: String? = null,
+    private val localAuthorName: String = "Coffee Lover",
+    private val localReviews: LocalReviewsStorage = LocalReviewsStorage(context)
 ) {
     private fun requireUid(): String =
-        auth?.currentUser?.uid ?: throw IllegalStateException("Please sign in with Google to continue.")
+        currentLocalUid ?: auth?.currentUser?.uid ?: throw IllegalStateException("Please sign in to continue.")
 
     // --- FEATURE 4: OFFERS & COUPONS ---
 
@@ -224,7 +228,7 @@ class PlatformEngagementRepository(
     // --- FEATURE 6: CUSTOMER PHOTO REVIEWS ---
 
     fun observePhotoReviews(includeFlaggedForAdmin: Boolean = false): Flow<List<PhotoReviewDoc>> {
-        val firestore = db ?: return flowOf(emptyList())
+        val firestore = db ?: return localReviews.reviews
         val query = if (includeFlaggedForAdmin) {
             firestore.collection("reviews")
         } else {
@@ -246,7 +250,8 @@ class PlatformEngagementRepository(
     fun observeMyReviewVotes(uid: String?): Flow<Set<String>> {
         val cleanUid = uid?.trim().orEmpty()
         val firestore = db
-        if (cleanUid.isEmpty() || firestore == null) return flowOf(emptySet())
+        if (cleanUid.isEmpty()) return flowOf(emptySet())
+        if (firestore == null) return localReviews.votes
 
         return firestore.collection("review_votes")
             .whereEqualTo("userId", cleanUid)
@@ -263,10 +268,21 @@ class PlatformEngagementRepository(
     ): Result<Unit> {
         return try {
             val uid = requireUid()
-            val firestore = db ?: return Result.failure(IllegalStateException("Cloud database unavailable."))
             val cleanComment = comment.trim()
             require(rating in 1..5) { "Rating must be between 1 and 5." }
             require(cleanComment.length in 1..800) { "Review text must be 1 to 800 characters." }
+            val firestore = db
+            if (firestore == null) {
+                localReviews.add(
+                    PhotoReviewDoc(
+                        id = "local-${UUID.randomUUID()}", shopId = shopId, userId = uid,
+                        authorName = localAuthorName.take(60), rating = rating.toLong(), comment = cleanComment,
+                        photoUrls = pickedImageUris.take(3).map { it.toString() }, visibility = "public",
+                        createdAt = Timestamp(Date()), updatedAt = Timestamp(Date())
+                    )
+                )
+                return Result.success(Unit)
+            }
 
             val uploadedUrls = mutableListOf<String>()
             val limitedUris = pickedImageUris.take(3)
@@ -315,7 +331,11 @@ class PlatformEngagementRepository(
     suspend fun toggleHelpfulVote(reviewId: String, currentlyVoted: Boolean): Result<Unit> {
         return try {
             val uid = requireUid()
-            val firestore = db ?: return Result.failure(IllegalStateException("Cloud database unavailable."))
+            val firestore = db
+            if (firestore == null) {
+                localReviews.toggleVote(reviewId, currentlyVoted)
+                return Result.success(Unit)
+            }
             val ref = firestore.collection("review_votes").document("${reviewId}_${uid}")
             if (currentlyVoted) {
                 ref.delete().await()
@@ -339,9 +359,13 @@ class PlatformEngagementRepository(
     suspend fun reportReview(reviewId: String, reason: String): Result<Unit> {
         return try {
             val uid = requireUid()
-            val firestore = db ?: return Result.failure(IllegalStateException("Cloud database unavailable."))
+            val firestore = db
             val cleanReason = reason.trim().ifBlank { "Inappropriate or misleading review" }.take(200)
             require(cleanReason.length >= 3) { "Please describe the issue." }
+            if (firestore == null) {
+                localReviews.report(reviewId)
+                return Result.success(Unit)
+            }
             firestore.collection("review_reports").document("${reviewId}_${uid}")
                 .set(
                     mapOf(
@@ -363,7 +387,11 @@ class PlatformEngagementRepository(
     suspend fun moderateReview(reviewId: String, visibility: String): Result<Unit> {
         return try {
             requireUid()
-            val firestore = db ?: return Result.failure(IllegalStateException("Cloud database unavailable."))
+            val firestore = db
+            if (firestore == null) {
+                localReviews.setVisibility(reviewId, visibility)
+                return Result.success(Unit)
+            }
             firestore.collection("reviews").document(reviewId)
                 .update(
                     mapOf(
@@ -383,7 +411,11 @@ class PlatformEngagementRepository(
     suspend fun deletePhotoReview(reviewId: String): Result<Unit> {
         return try {
             requireUid()
-            val firestore = db ?: return Result.failure(IllegalStateException("Cloud database unavailable."))
+            val firestore = db
+            if (firestore == null) {
+                localReviews.delete(reviewId)
+                return Result.success(Unit)
+            }
             firestore.collection("reviews").document(reviewId).delete().await()
             Result.success(Unit)
         } catch (e: CancellationException) {

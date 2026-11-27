@@ -37,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.credentials.CredentialManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -52,7 +51,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.NotificationDeepLink
 import com.example.R
-import com.example.data.FirebaseSafeAccess
+import com.example.data.local.LocalAuthRepository
 import com.example.data.LocationProvider
 import com.example.model.DigitalMenuItemDoc
 import com.example.model.ExploreCategory
@@ -86,11 +85,6 @@ import com.example.ui.theme.WarmCream
 import com.example.util.PlatformLogic
 import com.example.viewmodel.CoffeeViewModel
 import com.example.viewmodel.PlatformViewModel
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -111,58 +105,31 @@ private const val ROUTE_ADMIN_DASHBOARD = "admin_dashboard"
 private const val ARG_SHOP_ID = "shopId"
 private const val ARG_SHOP_NAME = "shopName"
 
-fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
-    val listener = FirebaseAuth.AuthStateListener { auth ->
-        trySend(auth.currentUser)
-    }
-    addAuthStateListener(listener)
-    awaitClose { removeAuthStateListener(listener) }
-}
-
 @Composable
 fun NightCoffeeNavigation(
     pendingDeepLink: NotificationDeepLink? = null,
     onConsumeDeepLink: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val auth = remember(context) {
-        if (FirebaseSafeAccess.ensureInitialized(context)) {
-            runCatching { FirebaseAuth.getInstance() }.getOrNull()
-        } else {
-            null
-        }
-    }
-    val currentUser by remember(auth) {
-        auth?.authStateFlow() ?: flowOf(null)
-    }.collectAsStateWithLifecycle(initialValue = auth?.currentUser)
-
-    var showSplashForAuthenticatedUser by rememberSaveable { mutableStateOf(auth?.currentUser != null) }
-    var authRefreshTick by remember { mutableStateOf(0) }
+    val localAuth = remember(context) { LocalAuthRepository(context.applicationContext) }
+    val currentUser by remember(localAuth) { localAuth.session }
+        .collectAsStateWithLifecycle(initialValue = null)
+    var showSplashForAuthenticatedUser by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(currentUser) {
-        if (currentUser == null) {
-            showSplashForAuthenticatedUser = false
-        }
+        showSplashForAuthenticatedUser = currentUser != null
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         val signedInUser = currentUser
         if (signedInUser == null) {
-            AuthScreen(
-                onAuthSuccess = {
-                    authRefreshTick++
-                }
-            )
+            AuthScreen(onAuthSuccess = { })
         } else {
-            val resolvedDisplayName = remember(signedInUser.uid, authRefreshTick, signedInUser.displayName, signedInUser.email) {
-                signedInUser.displayName
-                    ?.takeIf { it.isNotBlank() }
-                    ?: signedInUser.email?.substringBefore('@')?.takeIf { it.isNotBlank() }
-            }
-            key(signedInUser.uid) {
+            key(signedInUser.id) {
                 NightCoffeeAppContent(
-                    currentUserId = signedInUser.uid,
-                    displayName = resolvedDisplayName,
+                    currentUserId = signedInUser.id,
+                    displayName = signedInUser.displayName,
+                    accountStatusLabel = signedInUser.statusLabel,
                     isSignedIn = true,
                     pendingDeepLink = pendingDeepLink,
                     onConsumeDeepLink = onConsumeDeepLink,
@@ -180,6 +147,7 @@ fun NightCoffeeNavigation(
 private fun NightCoffeeAppContent(
     currentUserId: String,
     displayName: String?,
+    accountStatusLabel: String,
     isSignedIn: Boolean,
     pendingDeepLink: NotificationDeepLink?,
     onConsumeDeepLink: () -> Unit,
@@ -187,9 +155,6 @@ private fun NightCoffeeAppContent(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val credentialManager = remember(context) {
-        runCatching { CredentialManager.create(context) }.getOrNull()
-    }
     val navController = rememberNavController()
     val coffeeViewModel: CoffeeViewModel = viewModel(
         key = currentUserId,
@@ -197,7 +162,7 @@ private fun NightCoffeeAppContent(
     )
     val platformViewModel: PlatformViewModel = viewModel(
         key = "platform_$currentUserId",
-        factory = PlatformViewModel.factory(context, currentUserId)
+        factory = PlatformViewModel.factory(context, currentUserId, displayName)
     )
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -463,6 +428,7 @@ private fun NightCoffeeAppContent(
                                 uiState = uiState,
                                 isSignedIn = isSignedIn,
                                 displayName = displayName,
+                                accountStatusLabel = accountStatusLabel,
                                 onAddShopClick = {
                                     if (isSignedIn) {
                                         showAddShopSheet = true
@@ -475,7 +441,6 @@ private fun NightCoffeeAppContent(
                                 onSignOutClick = {
                                     signOut(
                                         context = context,
-                                        credentialManager = credentialManager,
                                         scope = scope
                                     )
                                 },

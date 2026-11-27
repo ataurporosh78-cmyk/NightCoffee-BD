@@ -470,7 +470,7 @@ class PlatformViewModel(
     }
 
     companion object {
-        fun factory(context: Context, currentUid: String?): ViewModelProvider.Factory {
+        fun factory(context: Context, currentUid: String?, displayName: String? = null): ViewModelProvider.Factory {
             val appContext = context.applicationContext
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -478,7 +478,11 @@ class PlatformViewModel(
                     return PlatformViewModel(
                         currentUid = currentUid,
                         catalogRepo = PlatformCatalogRepository(appContext),
-                        engagementRepo = PlatformEngagementRepository(appContext),
+                        engagementRepo = PlatformEngagementRepository(
+                            context = appContext,
+                            currentLocalUid = currentUid,
+                            localAuthorName = displayName?.takeIf { it.isNotBlank() } ?: "Coffee Lover"
+                        ),
                         communityRepo = PlatformCommunityRepository(appContext),
                         connectivityObserver = ConnectivityObserver(appContext)
                     ) as T

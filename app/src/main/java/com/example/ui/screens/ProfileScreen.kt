@@ -78,6 +78,7 @@ fun ProfileScreen(
     uiState: CoffeeHomeUiState,
     isSignedIn: Boolean,
     displayName: String?,
+    accountStatusLabel: String = "Local account · saved on this device",
     onAddShopClick: () -> Unit,
     onEnableLocationClick: () -> Unit,
     onSignInClick: () -> Unit,
@@ -175,13 +176,13 @@ fun ProfileScreen(
                                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.VerifiedUser,
+                                        imageVector = Icons.Rounded.Person,
                                         contentDescription = null,
                                         tint = OpenGreen,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Text(
-                                        text = stringResource(R.string.profile_signed_in_badge),
+                                        text = accountStatusLabel,
                                         style = MaterialTheme.typography.labelMedium,
                                         color = OpenGreen
                                     )

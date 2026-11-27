@@ -1,8 +1,6 @@
 package com.example.ui.screens
 
-import android.app.Activity
 import android.content.Context
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -78,15 +76,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.credentials.ClearCredentialStateRequest
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.exceptions.NoCredentialException
 import com.example.R
-import com.example.data.FirebaseSafeAccess
+import com.example.data.local.LocalAuthRepository
 import com.example.ui.components.AnimatedSteamingCoffeeEmblem
 import com.example.ui.components.EaseOutMotion
 import com.example.ui.components.LiquidGlassSurface
@@ -104,22 +95,8 @@ import com.example.ui.theme.OpenGreen
 import com.example.ui.theme.OpenGreenContainer
 import com.example.ui.theme.ToastedLatte
 import com.example.ui.theme.WarmCream
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-import com.google.firebase.FirebaseNetworkException
-import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthInvalidUserException
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.auth.FirebaseAuthWeakPasswordException
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 
 private enum class AuthMethodLoading {
     NONE,
@@ -171,9 +148,7 @@ fun AuthScreen(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
-    val credentialManager = remember(context) {
-        runCatching { CredentialManager.create(context) }.getOrNull()
-    }
+    val localAuth = remember(context) { LocalAuthRepository(context.applicationContext) }
 
     var isSignUpMode by rememberSaveable { mutableStateOf(false) }
     var fullName by rememberSaveable { mutableStateOf("") }
@@ -204,7 +179,7 @@ fun AuthScreen(
         } else {
             loadingMethod = AuthMethodLoading.EMAIL
             performEmailAuth(
-                context = context,
+                repository = localAuth,
                 isSignUp = isSignUpMode,
                 displayName = cleanName,
                 email = cleanEmail,
@@ -506,20 +481,7 @@ fun AuthScreen(
                                         if (resetError != null) {
                                             authError = resetError
                                         } else {
-                                            loadingMethod = AuthMethodLoading.EMAIL
-                                            sendPasswordReset(
-                                                context = context,
-                                                email = cleanEmail,
-                                                scope = scope,
-                                                onSuccess = {
-                                                    loadingMethod = AuthMethodLoading.NONE
-                                                    infoMessage = "Password reset link sent to $cleanEmail."
-                                                },
-                                                onError = { msg ->
-                                                    loadingMethod = AuthMethodLoading.NONE
-                                                    authError = msg
-                                                }
-                                            )
+                                            infoMessage = "Local accounts are stored on this device and cannot receive email reset links. Create a new account if you no longer know the password."
                                         }
                                     },
                                     modifier = Modifier
@@ -595,22 +557,17 @@ fun AuthScreen(
                                 authError = null
                                 infoMessage = null
                                 loadingMethod = AuthMethodLoading.GOOGLE
-                                onGoogleSignInClicked(
-                                    context = context,
-                                    credentialManager = credentialManager,
-                                    onAuthSuccess = {
-                                        loadingMethod = AuthMethodLoading.NONE
-                                        onAuthSuccess()
-                                    },
-                                    onAuthError = { msg ->
-                                        loadingMethod = AuthMethodLoading.NONE
-                                        authError = msg
-                                    },
-                                    onAuthCancelled = {
-                                        loadingMethod = AuthMethodLoading.NONE
-                                    },
-                                    scope = scope
-                                )
+                                scope.launch {
+                                    runCatching { localAuth.continueWithLocalProfile() }
+                                        .onSuccess {
+                                            loadingMethod = AuthMethodLoading.NONE
+                                            onAuthSuccess()
+                                        }
+                                        .onFailure {
+                                            loadingMethod = AuthMethodLoading.NONE
+                                            authError = "Unable to start a local profile. Please try again."
+                                        }
+                                }
                             },
                             enabled = !isBusy,
                             shape = RoundedCornerShape(16.dp),
@@ -637,12 +594,39 @@ fun AuthScreen(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = stringResource(R.string.auth_sign_in_google),
+                                    text = "Continue with local profile",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.SemiBold,
                                     textAlign = TextAlign.Center
                                 )
                             }
+                        }
+
+                        Text(
+                            text = "Local-only profile · not verified by Google",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MutedCinnamon,
+                            textAlign = TextAlign.Center
+                        )
+
+                        TextButton(
+                            enabled = !isBusy,
+                            onClick = {
+                                scope.launch {
+                                    runCatching { localAuth.continueAsGuest() }
+                                        .onSuccess {
+                                            loadingMethod = AuthMethodLoading.NONE
+                                            onAuthSuccess()
+                                        }
+                                        .onFailure {
+                                            loadingMethod = AuthMethodLoading.NONE
+                                            authError = "Unable to continue as guest. Please try again."
+                                        }
+                                }
+                            },
+                            modifier = Modifier.testTag("continue_as_guest_button")
+                        ) {
+                            Text("Continue as Guest", color = MutedCinnamon, style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
@@ -683,7 +667,7 @@ private fun AuthModeTab(
 }
 
 private fun performEmailAuth(
-    context: Context,
+    repository: LocalAuthRepository,
     isSignUp: Boolean,
     displayName: String,
     email: String,
@@ -692,150 +676,24 @@ private fun performEmailAuth(
     onSuccess: () -> Unit,
     onError: (String) -> Unit
 ) {
-    val auth = FirebaseSafeAccess.safeAuth(context) ?: run {
-        onError(context.getString(R.string.auth_unavailable_msg))
-        return
-    }
     scope.launch {
         try {
-            if (isSignUp) {
-                val result = auth.createUserWithEmailAndPassword(email, password).await()
-                if (displayName.isNotBlank()) {
-                    withContext(NonCancellable) {
-                        val profileUpdates = UserProfileChangeRequest.Builder()
-                            .setDisplayName(displayName)
-                            .build()
-                        runCatching { result.user?.updateProfile(profileUpdates)?.await() }
-                    }
-                }
-            } else {
-                auth.signInWithEmailAndPassword(email, password).await()
-            }
+            if (isSignUp) repository.createAccount(displayName, email, password.toCharArray())
+            else repository.signIn(email, password.toCharArray())
             onSuccess()
         } catch (e: Exception) {
-            Log.e("Auth", "Email authentication failed", e)
-            onError(mapFirebaseAuthException(e))
-        }
-    }
-}
-
-private fun sendPasswordReset(
-    context: Context,
-    email: String,
-    scope: CoroutineScope,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-) {
-    val auth = FirebaseSafeAccess.safeAuth(context) ?: run {
-        onError(context.getString(R.string.auth_unavailable_msg))
-        return
-    }
-    scope.launch {
-        try {
-            auth.sendPasswordResetEmail(email).await()
-            onSuccess()
-        } catch (e: Exception) {
-            Log.e("Auth", "Password reset failed", e)
-            onError(mapFirebaseAuthException(e))
-        }
-    }
-}
-
-private fun mapFirebaseAuthException(error: Exception): String {
-    return when (error) {
-        is FirebaseAuthWeakPasswordException ->
-            "Password is too weak. Please choose at least 6 characters."
-        is FirebaseAuthInvalidCredentialsException ->
-            "Incorrect email or password. Please double-check and try again."
-        is FirebaseAuthInvalidUserException ->
-            "No account found with this email. Switch to Create Account to sign up."
-        is FirebaseAuthUserCollisionException ->
-            "An account already exists with this email. Switch to Sign In instead."
-        is FirebaseNetworkException ->
-            "Network error. Please check your internet connection and try again."
-        is FirebaseAuthException -> when (error.errorCode) {
-            "ERROR_OPERATION_NOT_ALLOWED" ->
-                "Email/Password login is not enabled in Firebase Authentication yet. Enable it in Firebase Console or use Sign in with Google."
-            "ERROR_TOO_MANY_REQUESTS" ->
-                "Too many attempts. Please wait a moment and try again."
-            "ERROR_USER_DISABLED" ->
-                "This account has been disabled. Please contact support."
-            else -> error.localizedMessage ?: "Authentication failed (${error.errorCode})."
-        }
-        else -> error.localizedMessage ?: "Authentication failed. Please try again."
-    }
-}
-
-fun onGoogleSignInClicked(
-    context: Context,
-    credentialManager: CredentialManager?,
-    onAuthSuccess: () -> Unit,
-    onAuthError: (String) -> Unit,
-    onAuthCancelled: () -> Unit,
-    scope: CoroutineScope
-) {
-    val auth = FirebaseSafeAccess.safeAuth(context) ?: run {
-        onAuthError(context.getString(R.string.auth_unavailable_msg))
-        return
-    }
-    val clientId = FirebaseSafeAccess.getGoogleWebClientId(context) ?: run {
-        onAuthError("Google Sign-In is missing a valid Web Client ID in google-services.json. Please use Email & Password or check Firebase configuration.")
-        return
-    }
-    val cm = credentialManager ?: run {
-        onAuthError("Google Credential Manager is unavailable on this device. Please use Email & Password.")
-        return
-    }
-    val activityContext = context as? Activity ?: run {
-        onAuthError("Sign-in requires an active screen context.")
-        return
-    }
-    val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = clientId).build()
-    val request = GetCredentialRequest.Builder()
-        .addCredentialOption(signInOption)
-        .build()
-    scope.launch {
-        try {
-            val cred = cm.getCredential(activityContext, request).credential
-            if (cred is CustomCredential && cred.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                val token = GoogleIdTokenCredential.createFrom(cred.data).idToken
-                auth.signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
-                onAuthSuccess()
-            } else {
-                onAuthError("Unexpected credential type received from Google Sign-In.")
-            }
-        } catch (e: GetCredentialCancellationException) {
-            Log.w("Auth", "Google Sign-In flow cancelled or dismissed: ${e.message}", e)
-            onAuthCancelled()
-        } catch (e: NoCredentialException) {
-            Log.w("Auth", "No Google credentials available: ${e.message}", e)
-            onAuthError("No Google account available on this device, or Google Sign-In is not configured for this build's SHA fingerprint. Try Email & Password sign-in.")
-        } catch (e: GetCredentialException) {
-            Log.e("Auth", "Google Credential Manager error", e)
-            onAuthError(e.localizedMessage ?: "Google Sign-In failed. Please try Email & Password or check your network.")
-        } catch (e: Exception) {
-            Log.e("Auth", "Google Sign-In failed", e)
-            onAuthError(mapFirebaseAuthException(e))
+            onError(e.message ?: "Unable to sign in locally. Please try again.")
         }
     }
 }
 
 fun signOut(
     context: Context,
-    credentialManager: CredentialManager?,
     scope: CoroutineScope,
     onSignOutComplete: () -> Unit = {}
 ) {
     scope.launch {
-        withContext(NonCancellable) {
-            try {
-                credentialManager?.clearCredentialState(ClearCredentialStateRequest())
-            } catch (e: Exception) {
-                Log.w("Auth", "Failed to clear credential state: ${e.message}")
-            } finally {
-                runCatching { FirebaseSafeAccess.safeAuth(context)?.signOut() }
-                onSignOutComplete()
-            }
-        }
+        runCatching { LocalAuthRepository(context.applicationContext).signOut() }
+        onSignOutComplete()
     }
 }
