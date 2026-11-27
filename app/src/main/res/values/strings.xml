@@ -70,7 +70,6 @@
     <string name="signature_highlight">Signature</string>
     <string name="auth_sign_in_desc">Sign in</string>
     <string name="auth_sign_in_to_review">Sign in to Post Review</string>
-    <string name="auth_unavailable_msg">Firebase Authentication is unavailable in this build. Please verify google-services.json configuration.</string>
     <string name="home_greeting_evening">Good Evening</string>
     <string name="home_greeting_subtitle">Find your perfect midnight coffee.</string>
     <string name="home_search_prompt">Search cafes, areas, or signature brews…</string>
@@ -93,7 +92,6 @@
     <string name="favorites_title">Saved Cafes</string>
     <string name="favorites_subtitle">Your bookmarked late-night hangouts</string>
     <string name="profile_title">Night Explorer</string>
-    <string name="profile_signed_in_badge">Signed-In Member</string>
     <string name="profile_add_shop_title">Submit a Late-Night Cafe</string>
     <string name="profile_add_shop_subtitle">Share a hidden espresso bar or rooftop lounge in Dhaka.</string>
     <string name="profile_location_title">Nearby Distance</string>
